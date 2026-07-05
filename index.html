@@ -1600,6 +1600,38 @@
       });
     }
 
+    function resolveWalletConnectProviderFactory(host = window) {
+      const candidates = [
+        host?.WalletConnectEthereumProvider,
+        host?.EthereumProvider,
+        host?.["@walletconnect/ethereum-provider"]
+      ];
+
+      for (const candidate of candidates) {
+        if (!candidate) {
+          continue;
+        }
+
+        if (typeof candidate.init === "function") {
+          return candidate;
+        }
+
+        if (candidate.EthereumProvider && typeof candidate.EthereumProvider.init === "function") {
+          return candidate.EthereumProvider;
+        }
+
+        if (candidate.default && typeof candidate.default.init === "function") {
+          return candidate.default;
+        }
+
+        if (candidate.default?.EthereumProvider && typeof candidate.default.EthereumProvider.init === "function") {
+          return candidate.default.EthereumProvider;
+        }
+      }
+
+      return null;
+    }
+
     function pickInjectedEthereumProvider() {
       if (window.coinbaseWalletExtension && typeof window.coinbaseWalletExtension.request === "function") {
         return window.coinbaseWalletExtension;
@@ -1653,11 +1685,7 @@
       const scriptUrl = "https://unpkg.com/@walletconnect/ethereum-provider@2.17.3/dist/index.umd.js";
       await loadScriptOnce(scriptUrl);
 
-      const EthereumProviderFactory =
-        window?.WalletConnectEthereumProvider?.EthereumProvider ||
-        window?.WalletConnectEthereumProvider ||
-        window?.EthereumProvider ||
-        null;
+      const EthereumProviderFactory = resolveWalletConnectProviderFactory(window);
 
       if (!EthereumProviderFactory || typeof EthereumProviderFactory.init !== "function") {
         throw new Error("WalletConnect provider bundle did not expose EthereumProvider.");
@@ -1665,9 +1693,14 @@
 
       const provider = await EthereumProviderFactory.init({
         projectId: REOWN_PROJECT_ID,
-        chains: [CHAIN_CONFIG.chainIdDecimal],
         optionalChains: [CHAIN_CONFIG.chainIdDecimal],
         showQrModal: true,
+        metadata: {
+          name: "Base 2048 Pulse",
+          description: "A polished on-chain 2048 game on Base Mainnet.",
+          url: getAppUrl(),
+          icons: ["https://base2048pulse.vercel.app/assets/farcaster-icon.png"]
+        },
         methods: [
           "eth_requestAccounts",
           "eth_accounts",
