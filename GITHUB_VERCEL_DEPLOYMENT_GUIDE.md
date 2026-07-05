@@ -110,6 +110,8 @@ Recommended settings:
 - Output Directory: leave empty
 - Install Command: leave empty
 
+If you want wallet connection to work in iPhone Safari, replace `REPLACE_WITH_REOWN_PROJECT_ID` inside `index.html` with a real Reown / WalletConnect project ID before deploying.
+
 Optional environment variable:
 
 - `ETHERSCAN_API_KEY` = your Etherscan API key for the most reliable `base.eth` / explorer nametag lookup on Base
@@ -138,6 +140,7 @@ After deployment:
 14. Start a run and submit a score at any point if you are testing the V2 contract flow
 15. Refresh the leaderboard
 16. If desired, continue until `Game Over` and test the end-state UI as well
+17. Confirm `Connect Wallet` opens the WalletConnect / Reown path in iPhone Safari once the Reown project ID is configured
 
 If you also want to publish the app as a Farcaster Mini App, continue with:
 
@@ -161,6 +164,7 @@ Before sharing the live URL publicly, confirm these points:
 - The live site points to the intended V2 production contract address
 - The live Farcaster manifest points to the correct production domain
 - The preview image and icon are served from your own deployed `assets/` folder
+- If Safari support matters, the live frontend no longer contains the placeholder `REPLACE_WITH_REOWN_PROJECT_ID`
 
 ## 9. How to Update the Site Later
 
@@ -190,6 +194,8 @@ DEFAULT_CONTRACT_ADDRESS
 
 Then replace the old contract address with the new one, commit, push, and let Vercel redeploy.
 
+If you also want Safari on iPhone to connect wallets directly from the public site, update the `REOWN_PROJECT_ID` placeholder in that same file before pushing the next deployment.
+
 Current production address:
 
 ```text
@@ -203,6 +209,7 @@ Current production address:
 - Vercel deployment succeeds
 - Live site loads without errors
 - Wallet connect works
+- iPhone Safari WalletConnect fallback works after configuring a real Reown project ID
 - Base network switch works
 - On-chain score submission works
 - Leaderboard refresh works
