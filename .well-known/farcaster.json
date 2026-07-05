@@ -1,0 +1,27 @@
+{
+  "accountAssociation": {
+    "header": "REPLACE_WITH_FARCASTER_HEADER",
+    "payload": "REPLACE_WITH_FARCASTER_PAYLOAD",
+    "signature": "REPLACE_WITH_FARCASTER_SIGNATURE"
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Base2048Pulse",
+    "homeUrl": "https://your-vercel-domain.vercel.app/",
+    "iconUrl": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=minimal%20glossy%20app%20icon%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20electric%20blue%20tile%2C%20premium%20dark%20background%2C%20clean%20icon%2C%20centered%20symbol%2C%20no%20text&image_size=square_hd",
+    "imageUrl": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=futuristic%20arcade%20cover%20art%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20glowing%20blue%20grid%2C%20premium%20dark%20interface%2C%20neon%20tiles%2C%20high%20contrast%2C%20clean%20game%20poster%2C%20no%20distorted%20text&image_size=landscape_4_3",
+    "buttonTitle": "Play 2048 Pulse",
+    "splashImageUrl": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=minimal%20glossy%20app%20icon%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20electric%20blue%20tile%2C%20premium%20dark%20background%2C%20clean%20icon%2C%20centered%20symbol%2C%20no%20text&image_size=square_hd",
+    "splashBackgroundColor": "#07111f"
+  },
+  "frame": {
+    "version": "1",
+    "name": "Base2048Pulse",
+    "homeUrl": "https://your-vercel-domain.vercel.app/",
+    "iconUrl": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=minimal%20glossy%20app%20icon%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20electric%20blue%20tile%2C%20premium%20dark%20background%2C%20clean%20icon%2C%20centered%20symbol%2C%20no%20text&image_size=square_hd",
+    "imageUrl": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=futuristic%20arcade%20cover%20art%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20glowing%20blue%20grid%2C%20premium%20dark%20interface%2C%20neon%20tiles%2C%20high%20contrast%2C%20clean%20game%20poster%2C%20no%20distorted%20text&image_size=landscape_4_3",
+    "buttonTitle": "Play 2048 Pulse",
+    "splashImageUrl": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=minimal%20glossy%20app%20icon%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20electric%20blue%20tile%2C%20premium%20dark%20background%2C%20clean%20icon%2C%20centered%20symbol%2C%20no%20text&image_size=square_hd",
+    "splashBackgroundColor": "#07111f"
+  }
+}
