@@ -71,6 +71,7 @@ Open the repository in GitHub and confirm:
 - `Base2048Pulse.sol` is present
 - the contract address in `index.html` is correct
 - no private data exists anywhere in the repository
+- the current production contract address is `0xaf73175B8E033B26b334B07823eabb2cbF15E2c7`
 
 ## 5. Import the Repository into Vercel
 
@@ -103,11 +104,13 @@ After deployment:
 3. Confirm the contract section shows the locked Base Mainnet address
 4. Confirm the BaseScan link works
 5. Confirm the leaderboard loads
+6. Confirm `All-Time`, `Weekly`, and `Daily` tabs load correctly
+7. Confirm the X and Farcaster share buttons open the correct share flows
 6. Connect a wallet
 7. Switch to Base Mainnet if prompted
-8. Play until `Game Over`
-9. Submit a score
-10. Refresh the leaderboard
+8. Start a run and submit a score at any point if you are testing the V2 contract flow
+9. Refresh the leaderboard
+10. If desired, continue until `Game Over` and test the end-state UI as well
 
 ## 8. Crypto Security Review Before Sharing
 
@@ -119,6 +122,7 @@ Before sharing the live URL publicly, confirm these points:
 - The site never asks for token approvals
 - The site never asks for unrelated message signatures
 - The site never asks users to transfer assets
+- The live site points to the intended V2 production contract address
 
 ## 9. How to Update the Site Later
 
@@ -148,6 +152,12 @@ DEFAULT_CONTRACT_ADDRESS
 
 Then replace the old contract address with the new one, commit, push, and let Vercel redeploy.
 
+Current production address:
+
+```text
+0xaf73175B8E033B26b334B07823eabb2cbF15E2c7
+```
+
 ## 11. Final Pre-Share Checklist
 
 - GitHub repository is clean
@@ -158,3 +168,5 @@ Then replace the old contract address with the new one, commit, push, and let Ve
 - Base network switch works
 - On-chain score submission works
 - Leaderboard refresh works
+- Daily / Weekly / All-Time tabs work
+- Share buttons work
