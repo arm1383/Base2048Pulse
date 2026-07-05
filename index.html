@@ -1632,6 +1632,39 @@
       return null;
     }
 
+    function resolveWalletConnectModuleFactory(moduleNamespace) {
+      const candidates = [
+        moduleNamespace?.EthereumProvider,
+        moduleNamespace?.default,
+        moduleNamespace?.default?.EthereumProvider
+      ];
+
+      for (const candidate of candidates) {
+        if (candidate && typeof candidate.init === "function") {
+          return candidate;
+        }
+      }
+
+      return null;
+    }
+
+    async function loadWalletConnectProviderFactory() {
+      try {
+        const moduleNamespace = await import("https://esm.sh/@walletconnect/ethereum-provider@2.17.3?bundle");
+        const moduleFactory = resolveWalletConnectModuleFactory(moduleNamespace);
+        if (moduleFactory) {
+          return moduleFactory;
+        }
+      } catch (error) {
+        // Fall back to the UMD loader below.
+      }
+
+      const scriptUrl = "https://unpkg.com/@walletconnect/ethereum-provider@2.17.3/dist/index.umd.js";
+      await loadScriptOnce(scriptUrl);
+
+      return resolveWalletConnectProviderFactory(window);
+    }
+
     function pickInjectedEthereumProvider() {
       if (window.coinbaseWalletExtension && typeof window.coinbaseWalletExtension.request === "function") {
         return window.coinbaseWalletExtension;
@@ -1682,10 +1715,7 @@
         return state.walletConnectProvider;
       }
 
-      const scriptUrl = "https://unpkg.com/@walletconnect/ethereum-provider@2.17.3/dist/index.umd.js";
-      await loadScriptOnce(scriptUrl);
-
-      const EthereumProviderFactory = resolveWalletConnectProviderFactory(window);
+      const EthereumProviderFactory = await loadWalletConnectProviderFactory();
 
       if (!EthereumProviderFactory || typeof EthereumProviderFactory.init !== "function") {
         throw new Error("WalletConnect provider bundle did not expose EthereumProvider.");
