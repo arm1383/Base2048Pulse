@@ -7,6 +7,7 @@ This guide shows the exact workflow for publishing this project through a new Gi
 Make sure the folder contains these files:
 
 - `index.html`
+- `api/address-tag.js`
 - `Base2048Pulse.sol`
 - `README.md`
 - `SECURITY.md`
@@ -67,6 +68,7 @@ Replace:
 Open the repository in GitHub and confirm:
 
 - `index.html` is present at the repository root
+- `api/address-tag.js` is present for explorer-backed leaderboard name tags
 - `vercel.json` is present at the repository root
 - `Base2048Pulse.sol` is present
 - the contract address in `index.html` is correct
@@ -84,7 +86,7 @@ Open the repository in GitHub and confirm:
 
 ## 6. Configure the Vercel Project
 
-This project is static and does not need a framework preset.
+This project uses a plain frontend plus a small Vercel serverless route and does not need a framework preset.
 
 Recommended settings:
 
@@ -92,6 +94,12 @@ Recommended settings:
 - Build Command: leave empty
 - Output Directory: leave empty
 - Install Command: leave empty
+
+Optional environment variable:
+
+- `ETHERSCAN_API_KEY` = your Etherscan API key for the most reliable `base.eth` / explorer nametag lookup on Base
+
+If you do not set the API key, the app falls back to a best-effort explorer page lookup, but the API-backed path is still the most reliable option.
 
 Then click `Deploy`
 
@@ -105,12 +113,13 @@ After deployment:
 4. Confirm the BaseScan link works
 5. Confirm the leaderboard loads
 6. Confirm `All-Time`, `Weekly`, and `Daily` tabs load correctly
-7. Confirm the X and Farcaster share buttons open the correct share flows
-6. Connect a wallet
-7. Switch to Base Mainnet if prompted
-8. Start a run and submit a score at any point if you are testing the V2 contract flow
-9. Refresh the leaderboard
-10. If desired, continue until `Game Over` and test the end-state UI as well
+7. Confirm leaderboard rows with registered Base names show `*.base.eth` instead of raw wallet addresses
+8. Confirm the X and Farcaster share buttons open the correct share flows
+9. Connect a wallet
+10. Switch to Base Mainnet if prompted
+11. Start a run and submit a score at any point if you are testing the V2 contract flow
+12. Refresh the leaderboard
+13. If desired, continue until `Game Over` and test the end-state UI as well
 
 ## 8. Crypto Security Review Before Sharing
 
