@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Base 2048 Pulse</title>
+  <meta name="description" content="A polished 2048 game with smooth touch controls, wallet connect, and on-chain score submission on Base Mainnet.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Oxanium:wght@500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --bg-elevated: rgba(10, 18, 34, 0.78);
+      --bg-panel: rgba(13, 24, 45, 0.86);
+      --bg-soft: rgba(255, 255, 255, 0.05);
+      --line: rgba(255, 255, 255, 0.09);
+      --text: #f5fbff;
+      --muted: #92a8c7;
+      --primary: #0052ff;
+      --primary-2: #59d8ff;
+      --success: #1ed8a4;
+      --warning: #ffbe55;
+      --danger: #ff6d87;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+      --tile-empty: rgba(255, 255, 255, 0.045);
+      --tile-text-dark: #06101f;
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+      --board-gap: 12px;
+      --board-size: min(84vw, 520px);
+      --cell-size: calc((var(--board-size) - (var(--board-gap) * 5)) / 4);
+      --tile-2: linear-gradient(180deg, #eef8ff 0%, #d8eefe 100%);
+      --tile-4: linear-gradient(180deg, #fff1bd 0%, #ffd86e 100%);
+      --tile-8: linear-gradient(180deg, #ffc98c 0%, #ff9754 100%);
+      --tile-16: linear-gradient(180deg, #ff9b91 0%, #ff5b68 100%);
+      --tile-32: linear-gradient(180deg, #e298ff 0%, #9d5dff 100%);
+      --tile-64: linear-gradient(180deg, #9bd3ff 0%, #4c8dff 100%);
+      --tile-128: linear-gradient(180deg, #7ef1db 0%, #1fd7ac 100%);
+      --tile-256: linear-gradient(180deg, #a8ffe6 0%, #00d2a2 100%);
+      --tile-512: linear-gradient(180deg, #8fc3ff 0%, #2c72ff 100%);
+      --tile-1024: linear-gradient(180deg, #d9f2ff 0%, #59d8ff 100%);
+      --tile-2048: linear-gradient(135deg, #ffffff 0%, #6cf7ff 48%, #0052ff 100%);
+      --tile-max: linear-gradient(135deg, #ffffff 0%, #89b2ff 38%, #2d4dff 100%);
+    }
+
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #edf4ff;
+      --bg-elevated: rgba(255, 255, 255, 0.8);
+      --bg-panel: rgba(255, 255, 255, 0.88);
+      --bg-soft: rgba(10, 18, 34, 0.05);
+      --line: rgba(7, 17, 31, 0.1);
+      --text: #06101f;
+      --muted: #5d7392;
+      --shadow: 0 24px 80px rgba(9, 37, 83, 0.14);
+      --tile-empty: rgba(7, 17, 31, 0.055);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top, rgba(89, 216, 255, 0.16), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(0, 82, 255, 0.16), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Manrope", sans-serif;
+    }
+
+    body {
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .app-shell {
+      width: min(1180px, 100%);
+      display: grid;
+      gap: 20px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--bg-elevated);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-copy {
+      max-width: 700px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(0, 82, 255, 0.12);
+      color: var(--primary-2);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .brand {
+      margin: 16px 0 10px;
+      font-family: "Oxanium", sans-serif;
+      font-size: clamp(40px, 8vw, 72px);
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+    }
+
+    .brand span {
+      color: var(--primary-2);
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 680px;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .shell-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--bg-panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .game-panel {
+      padding: 24px;
+    }
+
+    .sidebar {
+      display: grid;
+      gap: 20px;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-family: "Oxanium", sans-serif;
+      font-size: 40px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .title-group p {
+      margin: 10px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .chip {
+      min-width: 110px;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      text-align: right;
+    }
+
+    .chip-label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .chip-value {
+      display: block;
+      margin-top: 8px;
+      font-family: "Oxanium", sans-serif;
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    .chip-value.success {
+      color: var(--success);
+    }
+
+    .board-wrap {
+      padding: 0;
+    }
+
+    .board-frame {
+      position: relative;
+      width: var(--board-size);
+      max-width: 100%;
+      margin: 0 auto;
+      border-radius: 28px;
+      padding: var(--board-gap);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .board-bg {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--board-gap);
+    }
+
+    .cell {
+      aspect-ratio: 1 / 1;
+      border-radius: 18px;
+      background: var(--tile-empty);
+    }
+
+    .tile-layer {
+      position: absolute;
+      inset: var(--board-gap);
+      pointer-events: none;
+    }
+
+    .tile {
+      position: absolute;
+      width: var(--cell-size);
+      height: var(--cell-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 18px;
+      font-family: "Oxanium", sans-serif;
+      font-weight: 800;
+      color: var(--tile-text-dark);
+      letter-spacing: -0.04em;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+      transition: transform 150ms ease, top 150ms ease, left 150ms ease;
+      animation: tile-pop 150ms ease;
+    }
+
+    .tile.size-small {
+      font-size: clamp(26px, 4vw, 36px);
+    }
+
+    .tile.size-medium {
+      font-size: clamp(24px, 3.6vw, 32px);
+    }
+
+    .tile.size-large {
+      font-size: clamp(20px, 3vw, 26px);
+    }
+
+    .tile[data-value="2"] { background: var(--tile-2); }
+    .tile[data-value="4"] { background: var(--tile-4); }
+    .tile[data-value="8"] { background: var(--tile-8); }
+    .tile[data-value="16"] { background: var(--tile-16); }
+    .tile[data-value="32"] { background: var(--tile-32); color: #fff; }
+    .tile[data-value="64"] { background: var(--tile-64); color: #fff; }
+    .tile[data-value="128"] { background: var(--tile-128); }
+    .tile[data-value="256"] { background: var(--tile-256); }
+    .tile[data-value="512"] { background: var(--tile-512); color: #fff; }
+    .tile[data-value="1024"] { background: var(--tile-1024); }
+    .tile[data-value="2048"] { background: var(--tile-2048); }
+    .tile[data-super="true"] { background: var(--tile-max); color: #041123; }
+
+    @keyframes tile-pop {
+      from {
+        transform: scale(0.84);
+        opacity: 0.2;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 18px 0 8px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 14px 18px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 140ms ease, opacity 140ms ease, background 140ms ease, border-color 140ms ease, color 140ms ease;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.52;
+      transform: none;
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, #3f7cff 100%);
+      color: #fff;
+      box-shadow: 0 14px 30px rgba(0, 82, 255, 0.28);
+    }
+
+    .button-secondary {
+      background: var(--bg-soft);
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .button-ghost {
+      background: transparent;
+      color: var(--muted);
+      border-color: var(--line);
+    }
+
+    .button:hover:not(:disabled),
+    .button:focus-visible:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .button:focus-visible,
+    .input:focus-visible,
+    .link-button:focus-visible {
+      outline: 2px solid var(--primary-2);
+      outline-offset: 2px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .status-card,
+    .stack-card {
+      padding: 20px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-title h2,
+    .section-title h3 {
+      margin: 0;
+      font-family: "Oxanium", sans-serif;
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .section-title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .network-badge,
+    .tiny-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--warning);
+      box-shadow: 0 0 18px rgba(255, 190, 85, 0.44);
+    }
+
+    .dot.success {
+      background: var(--success);
+      box-shadow: 0 0 18px rgba(30, 216, 164, 0.44);
+    }
+
+    .dot.danger {
+      background: var(--danger);
+      box-shadow: 0 0 18px rgba(255, 109, 135, 0.44);
+    }
+
+    .wallet-card,
+    .security-card,
+    .leaderboard-card,
+    .contract-card {
+      padding: 20px;
+    }
+
+    .wallet-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .meta-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mini {
+      border: 1px solid var(--line);
+      background: var(--bg-soft);
+      padding: 14px;
+      border-radius: var(--radius-md);
+    }
+
+    .mini-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .mini-value {
+      margin-top: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .status-banner {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: var(--bg-soft);
+      min-height: 76px;
+    }
+
+    .status-banner strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .status-banner p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .leaderboard-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .leaderboard-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--bg-soft);
+    }
+
+    .leaderboard-rank {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(0, 82, 255, 0.14);
+      color: var(--primary-2);
+      font-family: "Oxanium", sans-serif;
+      font-weight: 800;
+    }
+
+    .leaderboard-player {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .leaderboard-time {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .leaderboard-score {
+      font-family: "Oxanium", sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--success);
+      white-space: nowrap;
+    }
+
+    .security-list {
+      padding-left: 18px;
+      margin: 0;
+      color: var(--muted);
+      display: grid;
+      gap: 10px;
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .input {
+      flex: 1 1 220px;
+      min-width: 0;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
+      padding: 14px 16px;
+    }
+
+    .link-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .link-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      text-decoration: none;
+      background: var(--bg-soft);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+      padding: 4px 12px 22px;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(3, 9, 18, 0.76);
+      backdrop-filter: blur(16px);
+      z-index: 40;
+    }
+
+    .modal.is-open {
+      display: grid;
+    }
+
+    .modal-card {
+      width: min(540px, 100%);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--line);
+      background: var(--bg-panel);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .modal-card h3 {
+      margin: 0;
+      font-family: "Oxanium", sans-serif;
+      font-size: 28px;
+    }
+
+    .modal-card p,
+    .modal-card li {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .modal-card ol {
+      margin: 18px 0 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 980px) {
+      .shell-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        flex-direction: column;
+      }
+
+      .top-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .chips {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 12px;
+      }
+
+      .hero,
+      .game-panel,
+      .wallet-card,
+      .leaderboard-card,
+      .security-card,
+      .contract-card,
+      .status-card {
+        padding: 18px;
+        border-radius: 22px;
+      }
+
+      .brand {
+        font-size: 48px;
+      }
+
+      .title-group h1 {
+        font-size: 34px;
+      }
+
+      .chip {
+        min-width: calc(50% - 6px);
+        text-align: left;
+      }
+
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls .button,
+      .hero-actions .button {
+        width: 100%;
+      }
+
+      .leaderboard-item {
+        grid-template-columns: auto 1fr;
+      }
+
+      .leaderboard-score {
+        grid-column: 2;
+        justify-self: start;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+<script data-preview-injected src="https://lf3-static.bytednsdoc.com/obj/eden-cn/8011eh7nupenuvonuhd/previewer-tools.de3cd6a1.umd.js"></script></head>
+<body>
+  <div class="app-shell">
+    <section class="hero panel">
+      <div class="hero-copy">
+        <div class="eyebrow">Base Mainnet • Single File Build</div>
+        <div class="brand">2048 <span>Pulse</span></div>
+        <p>
+          A smoother, safer, and more user-friendly 2048 experience for desktop and mobile. Play locally with zero wallet friction,
+          then connect and submit your final score to Base Mainnet when the game ends.
+        </p>
+        <div class="hero-actions">
+          <button id="connectHeroButton" class="button button-primary" type="button">Connect Wallet</button>
+          <button id="openHelpButton" class="button button-secondary" type="button">How To Play</button>
+          <button id="themeToggleButton" class="button button-ghost" type="button">Toggle Theme</button>
+        </div>
+      </div>
+      <div class="network-badge" id="networkBadge">
+        <span class="dot" id="networkDot"></span>
+        <span id="networkBadgeText">Read-only Mode</span>
+      </div>
+    </section>
+
+    <div class="shell-grid">
+      <section class="panel game-panel">
+        <div class="top-row">
+          <div class="title-group">
+            <h1>2048 Arena</h1>
+            <p>Swipe on mobile or use Arrow keys / W A S D on desktop.</p>
+          </div>
+          <div class="chips">
+            <div class="chip">
+              <span class="chip-label">Score</span>
+              <span class="chip-value" id="scoreValue">0</span>
+            </div>
+            <div class="chip">
+              <span class="chip-label">Best Local</span>
+              <span class="chip-value success" id="bestLocalValue">0</span>
+            </div>
+            <div class="chip">
+              <span class="chip-label">Best On-chain</span>
+              <span class="chip-value success" id="bestOnChainValue">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="board-wrap">
+          <div class="board-frame" id="boardFrame" aria-label="2048 board" role="application">
+            <div class="board-bg" id="boardBackground"></div>
+            <div class="tile-layer" id="tileLayer"></div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="newGameButton" class="button button-primary" type="button">New Game</button>
+          <button id="undoButton" class="button button-secondary" type="button">Undo</button>
+          <button id="submitButton" class="button button-secondary" type="button">Submit Score</button>
+        </div>
+
+        <div class="meta-row">
+          <div class="hint" id="gameStateText">Start moving to build your first chain.</div>
+          <div class="tiny-badge" id="submitHint">Local play is always available.</div>
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="panel wallet-card">
+          <div class="section-title">
+            <div>
+              <h2>Wallet</h2>
+              <p>Connect only when you want to submit an on-chain score.</p>
+            </div>
+          </div>
+          <div class="wallet-grid">
+            <div class="status-banner" id="statusBanner" aria-live="polite">
+              <span class="dot" id="statusDot"></span>
+              <div>
+                <strong id="statusTitle">Ready</strong>
+                <p id="statusText">The game is playable right now without a wallet.</p>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="mini">
+                <div class="mini-label">Wallet Status</div>
+                <div class="mini-value" id="walletStatusValue">Not connected</div>
+              </div>
+              <div class="mini">
+                <div class="mini-label">Active Network</div>
+                <div class="mini-value" id="walletNetworkValue">Read-only</div>
+              </div>
+            </div>
+
+            <button id="connectSidebarButton" class="button button-primary" type="button">Connect Wallet</button>
+          </div>
+        </section>
+
+        <section class="panel leaderboard-card">
+          <div class="section-title">
+            <div>
+              <h3>Leaderboard</h3>
+              <p>Read directly from the deployed contract.</p>
+            </div>
+            <button id="refreshLeaderboardButton" class="button button-ghost" type="button">Refresh</button>
+          </div>
+          <ul class="leaderboard-list" id="leaderboardList" aria-live="polite">
+            <li class="leaderboard-item">
+              <div class="leaderboard-rank">#</div>
+              <div>
+                <div class="leaderboard-player">Loading contract leaderboard</div>
+                <div class="leaderboard-time">Scores are fetched from the locked Base Mainnet contract.</div>
+              </div>
+              <div class="leaderboard-score">--</div>
+            </li>
+          </ul>
+        </section>
+
+        <section class="panel contract-card">
+          <div class="section-title">
+            <div>
+              <h3>Contract</h3>
+              <p>This deployment is locked to a single Base Mainnet score contract.</p>
+            </div>
+          </div>
+
+          <div class="link-row">
+            <button id="copyContractButton" class="link-button" type="button">Copy Address</button>
+            <a id="contractExplorerLink" class="link-button" href="https://basescan.org/" target="_blank" rel="noreferrer">Open BaseScan</a>
+            <a class="link-button" href="https://remix.ethereum.org/" target="_blank" rel="noreferrer">Open Remix</a>
+          </div>
+
+          <div class="meta-grid" style="margin-top: 14px;">
+            <div class="mini">
+              <div class="mini-label">Contract Address</div>
+              <div class="mini-value" id="savedContractValue">Locked at build time</div>
+            </div>
+            <div class="mini">
+              <div class="mini-label">Network</div>
+              <div class="mini-value" id="chainLabelValue">Base Mainnet (8453)</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel security-card">
+          <div class="section-title">
+            <div>
+              <h3>Safety Notes</h3>
+              <p>This build is designed for the narrowest possible wallet surface.</p>
+            </div>
+          </div>
+          <ul class="security-list">
+            <li>The contract is for score storage only and must not hold user funds.</li>
+            <li>The frontend never asks for token approvals, permit signatures, or asset transfers.</li>
+            <li>If Base Mainnet is not selected, the app attempts a normal switch or add-chain flow.</li>
+            <li>The leaderboard is read from contract storage instead of scanning an arbitrary subset of past writes.</li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+
+    <div class="footer-note">
+      This build is locked to the deployed Base Mainnet contract and is ready for static hosting on Vercel.
+    </div>
+  </div>
+
+  <div class="modal" id="helpModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="section-title">
+        <div>
+          <h3>How It Works</h3>
+          <p>Quick usage notes for the full on-chain flow.</p>
+        </div>
+        <button id="closeHelpButton" class="button button-ghost" type="button">Close</button>
+      </div>
+      <ol>
+        <li>Play locally until the board reaches a game-over state.</li>
+        <li>Connect your wallet only when you are ready to submit a valid final score.</li>
+        <li>Switch to Base Mainnet if prompted by your wallet.</li>
+        <li>Submit only if your new score is higher than your previously stored on-chain score.</li>
+        <li>Refresh the leaderboard after confirmation to see the updated ranking.</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+    const DEFAULT_CONTRACT_ADDRESS = "0x2A726E28240F356Dbe80c02A6f5Dfd137C00D30D";
+    const STORAGE_KEYS = {
+      theme: "base2048-theme",
+      bestLocal: "base2048-best-local"
+    };
+
+    const CHAIN_CONFIG = {
+      chainIdHex: "0x2105",
+      chainIdDecimal: 8453,
+      chainName: "Base Mainnet",
+      nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+      rpcUrls: [
+        "https://mainnet.base.org",
+        "https://base.llamarpc.com",
+        "https://base-rpc.publicnode.com"
+      ],
+      blockExplorerUrls: ["https://basescan.org"]
+    };
+
+    const CONTRACT_ABI = [
+      "function paused() view returns (bool)",
+      "function minimumSubmitScore() view returns (uint256)",
+      "function getEntryCount() view returns (uint256)",
+      "function getTopEntries() view returns ((address player,uint256 score,uint256 updatedAt)[])",
+      "function getPlayerBestScore(address player) view returns (uint256)",
+      "function submitScore(uint256 score)",
+      "event ScoreSubmitted(address indexed player, uint256 score, uint256 previousBest, uint256 timestamp)"
+    ];
+
+    const state = {
+      board: new Array(16).fill(0),
+      score: 0,
+      bestLocalScore: Number(localStorage.getItem(STORAGE_KEYS.bestLocal) || "0"),
+      bestOnChainScore: 0,
+      previousSnapshot: null,
+      hasEnded: false,
+      hasWon: false,
+      txState: "idle",
+      lastSubmittedScore: null,
+      walletAddress: null,
+      contractAddress: DEFAULT_CONTRACT_ADDRESS,
+      currentChainId: null,
+      readProvider: null,
+      readContract: null,
+      browserProvider: null,
+      signer: null,
+      writeContract: null,
+      minimumSubmitScore: 0,
+      pointerStartX: 0,
+      pointerStartY: 0,
+      pointerActive: false
+    };
+
+    const elements = {};
+
+    function cacheElements() {
+      Object.assign(elements, {
+        boardBackground: document.getElementById("boardBackground"),
+        tileLayer: document.getElementById("tileLayer"),
+        boardFrame: document.getElementById("boardFrame"),
+        scoreValue: document.getElementById("scoreValue"),
+        bestLocalValue: document.getElementById("bestLocalValue"),
+        bestOnChainValue: document.getElementById("bestOnChainValue"),
+        gameStateText: document.getElementById("gameStateText"),
+        submitHint: document.getElementById("submitHint"),
+        walletStatusValue: document.getElementById("walletStatusValue"),
+        walletNetworkValue: document.getElementById("walletNetworkValue"),
+        statusBanner: document.getElementById("statusBanner"),
+        statusTitle: document.getElementById("statusTitle"),
+        statusText: document.getElementById("statusText"),
+        statusDot: document.getElementById("statusDot"),
+        connectHeroButton: document.getElementById("connectHeroButton"),
+        connectSidebarButton: document.getElementById("connectSidebarButton"),
+        refreshLeaderboardButton: document.getElementById("refreshLeaderboardButton"),
+        savedContractValue: document.getElementById("savedContractValue"),
+        chainLabelValue: document.getElementById("chainLabelValue"),
+        copyContractButton: document.getElementById("copyContractButton"),
+        contractExplorerLink: document.getElementById("contractExplorerLink"),
+        leaderboardList: document.getElementById("leaderboardList"),
+        newGameButton: document.getElementById("newGameButton"),
+        undoButton: document.getElementById("undoButton"),
+        submitButton: document.getElementById("submitButton"),
+        networkBadgeText: document.getElementById("networkBadgeText"),
+        networkDot: document.getElementById("networkDot"),
+        openHelpButton: document.getElementById("openHelpButton"),
+        closeHelpButton: document.getElementById("closeHelpButton"),
+        helpModal: document.getElementById("helpModal"),
+        themeToggleButton: document.getElementById("themeToggleButton")
+      });
+    }
+
+    function buildBoardBackground() {
+      for (let index = 0; index < 16; index += 1) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.setAttribute("aria-hidden", "true");
+        elements.boardBackground.appendChild(cell);
+      }
+    }
+
+    function setTheme(themeName) {
+      document.documentElement.setAttribute("data-theme", themeName);
+      localStorage.setItem(STORAGE_KEYS.theme, themeName);
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+      setTheme(currentTheme === "dark" ? "light" : "dark");
+    }
+
+    function loadStoredTheme() {
+      const storedTheme = localStorage.getItem(STORAGE_KEYS.theme) || "dark";
+      setTheme(storedTheme);
+    }
+
+    function setStatus(kind, title, text) {
+      elements.statusTitle.textContent = title;
+      elements.statusText.textContent = text;
+      elements.statusDot.className = "dot";
+      if (kind === "success") {
+        elements.statusDot.classList.add("success");
+      } else if (kind === "danger") {
+        elements.statusDot.classList.add("danger");
+      }
+    }
+
+    function updateNetworkBadge() {
+      const hasWallet = Boolean(state.walletAddress);
+      const onBase = Number(state.currentChainId) === CHAIN_CONFIG.chainIdDecimal;
+      elements.networkDot.className = "dot";
+
+      if (!hasWallet) {
+        elements.networkBadgeText.textContent = "Read-only Mode";
+        elements.networkDot.classList.add("success");
+        elements.walletNetworkValue.textContent = "Read-only";
+        return;
+      }
+
+      if (onBase) {
+        elements.networkBadgeText.textContent = "Base Mainnet Ready";
+        elements.networkDot.classList.add("success");
+        elements.walletNetworkValue.textContent = "Base Mainnet";
+        return;
+      }
+
+      elements.networkBadgeText.textContent = "Wrong Network";
+      elements.networkDot.classList.add("danger");
+      elements.walletNetworkValue.textContent = `Chain ${state.currentChainId || "Unknown"}`;
+    }
+
+    function shortenAddress(address) {
+      if (!address || address === ZERO_ADDRESS) return "Not configured";
+      return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    }
+
+    function updateContractLabels() {
+      elements.savedContractValue.textContent = state.contractAddress;
+      const explorerHref = `${CHAIN_CONFIG.blockExplorerUrls[0]}/address/${state.contractAddress}`;
+      elements.contractExplorerLink.href = explorerHref;
+    }
+
+    async function copyContractAddress() {
+      try {
+        await navigator.clipboard.writeText(state.contractAddress);
+        setStatus("success", "Address Copied", "The contract address was copied to your clipboard.");
+      } catch (error) {
+        setStatus("danger", "Copy Failed", "Clipboard access was blocked by the browser.");
+      }
+    }
+
+    async function createReadProvider() {
+      for (const rpcUrl of CHAIN_CONFIG.rpcUrls) {
+        try {
+          const provider = new ethers.JsonRpcProvider(rpcUrl, CHAIN_CONFIG.chainIdDecimal);
+          await provider.getBlockNumber();
+          return provider;
+        } catch (error) {
+          continue;
+        }
+      }
+      throw new Error("Unable to reach any Base RPC endpoint.");
+    }
+
+    async function initializeContracts() {
+      state.readProvider = await createReadProvider();
+      state.readContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.readProvider);
+
+      if (state.signer) {
+        state.writeContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.signer);
+      } else {
+        state.writeContract = null;
+      }
+
+      if (state.readContract) {
+        try {
+          const minimum = await state.readContract.minimumSubmitScore();
+          state.minimumSubmitScore = Number(minimum);
+        } catch (error) {
+          state.minimumSubmitScore = 0;
+        }
+      } else {
+        state.minimumSubmitScore = 0;
+      }
+    }
+
+    function createSnapshot() {
+      return {
+        board: [...state.board],
+        score: state.score,
+        hasEnded: state.hasEnded,
+        hasWon: state.hasWon
+      };
+    }
+
+    function restoreSnapshot(snapshot) {
+      state.board = [...snapshot.board];
+      state.score = snapshot.score;
+      state.hasEnded = snapshot.hasEnded;
+      state.hasWon = snapshot.hasWon;
+    }
+
+    function randomEmptyIndex() {
+      const empties = [];
+      state.board.forEach((value, index) => {
+        if (value === 0) empties.push(index);
+      });
+      if (!empties.length) return -1;
+      return empties[Math.floor(Math.random() * empties.length)];
+    }
+
+    function addRandomTile() {
+      const index = randomEmptyIndex();
+      if (index === -1) return;
+      state.board[index] = Math.random() < 0.9 ? 2 : 4;
+    }
+
+    function resetGame() {
+      state.board = new Array(16).fill(0);
+      state.score = 0;
+      state.previousSnapshot = null;
+      state.hasEnded = false;
+      state.hasWon = false;
+      state.lastSubmittedScore = null;
+      addRandomTile();
+      addRandomTile();
+      renderBoard();
+      updateScoreUI();
+      updateSubmissionState();
+      elements.gameStateText.textContent = "Build a path to 2048, then submit your final score on Base.";
+      setStatus("success", "Fresh Run", "The board is reset. Local play is instant and gas-free.");
+    }
+
+    function lineFromBoard(direction, lineIndex) {
+      if (direction === "left") {
+        return state.board.slice(lineIndex * 4, lineIndex * 4 + 4);
+      }
+      if (direction === "right") {
+        return state.board.slice(lineIndex * 4, lineIndex * 4 + 4).reverse();
+      }
+
+      const column = [];
+      for (let row = 0; row < 4; row += 1) {
+        const boardIndex = row * 4 + lineIndex;
+        column.push(state.board[boardIndex]);
+      }
+      return direction === "up" ? column : column.reverse();
+    }
+
+    function writeLineToBoard(direction, lineIndex, lineValues) {
+      if (direction === "left") {
+        for (let index = 0; index < 4; index += 1) {
+          state.board[lineIndex * 4 + index] = lineValues[index];
+        }
+        return;
+      }
+
+      if (direction === "right") {
+        const reversed = [...lineValues].reverse();
+        for (let index = 0; index < 4; index += 1) {
+          state.board[lineIndex * 4 + index] = reversed[index];
+        }
+        return;
+      }
+
+      const values = direction === "up" ? lineValues : [...lineValues].reverse();
+      for (let row = 0; row < 4; row += 1) {
+        state.board[row * 4 + lineIndex] = values[row];
+      }
+    }
+
+    function collapseLine(line) {
+      const filtered = line.filter(Boolean);
+      const output = [];
+      let gained = 0;
+
+      for (let index = 0; index < filtered.length; index += 1) {
+        const current = filtered[index];
+        const next = filtered[index + 1];
+        if (current === next) {
+          const merged = current * 2;
+          output.push(merged);
+          gained += merged;
+          if (merged >= 2048) {
+            state.hasWon = true;
+          }
+          index += 1;
+        } else {
+          output.push(current);
+        }
+      }
+
+      while (output.length < 4) {
+        output.push(0);
+      }
+
+      return { line: output, gained };
+    }
+
+    function boardsMatch(left, right) {
+      return left.every((value, index) => value === right[index]);
+    }
+
+    function attemptMove(direction) {
+      if (state.hasEnded) return false;
+
+      const beforeBoard = [...state.board];
+      const beforeScore = state.score;
+      const snapshot = createSnapshot();
+
+      for (let lineIndex = 0; lineIndex < 4; lineIndex += 1) {
+        const next = collapseLine(lineFromBoard(direction, lineIndex));
+        state.score += next.gained;
+        writeLineToBoard(direction, lineIndex, next.line);
+      }
+
+      if (boardsMatch(beforeBoard, state.board)) {
+        state.score = beforeScore;
+        return false;
+      }
+
+      state.previousSnapshot = snapshot;
+      addRandomTile();
+      state.bestLocalScore = Math.max(state.bestLocalScore, state.score);
+      localStorage.setItem(STORAGE_KEYS.bestLocal, String(state.bestLocalScore));
+      checkGameEnd();
+      renderBoard();
+      updateScoreUI();
+      updateSubmissionState();
+      return true;
+    }
+
+    function checkGameEnd() {
+      if (state.board.includes(0)) {
+        state.hasEnded = false;
+        elements.gameStateText.textContent = state.hasWon
+          ? "2048 reached. You can keep pushing for a higher final score."
+          : "Keep the chain alive and look for the next merge.";
+        return;
+      }
+
+      for (let row = 0; row < 4; row += 1) {
+        for (let col = 0; col < 4; col += 1) {
+          const value = state.board[row * 4 + col];
+          if (col < 3 && value === state.board[row * 4 + col + 1]) {
+            state.hasEnded = false;
+            return;
+          }
+          if (row < 3 && value === state.board[(row + 1) * 4 + col]) {
+            state.hasEnded = false;
+            return;
+          }
+        }
+      }
+
+      state.hasEnded = true;
+      elements.gameStateText.textContent = "Game over. Connect a wallet and submit if this run beats your on-chain best.";
+    }
+
+    function tileFontClass(value) {
+      const digits = String(value).length;
+      if (digits <= 2) return "size-small";
+      if (digits === 3) return "size-medium";
+      return "size-large";
+    }
+
+    function renderBoard() {
+      elements.tileLayer.innerHTML = "";
+
+      state.board.forEach((value, index) => {
+        if (!value) return;
+        const row = Math.floor(index / 4);
+        const col = index % 4;
+        const tile = document.createElement("div");
+        tile.className = `tile ${tileFontClass(value)}`;
+        tile.dataset.value = String(value);
+        if (value > 2048) {
+          tile.dataset.super = "true";
+        }
+        tile.textContent = String(value);
+        tile.style.left = `calc(${col} * (var(--cell-size) + var(--board-gap)))`;
+        tile.style.top = `calc(${row} * (var(--cell-size) + var(--board-gap)))`;
+        elements.tileLayer.appendChild(tile);
+      });
+    }
+
+    function updateScoreUI() {
+      elements.scoreValue.textContent = String(state.score);
+      elements.bestLocalValue.textContent = String(state.bestLocalScore);
+      elements.bestOnChainValue.textContent = String(state.bestOnChainScore);
+      elements.undoButton.disabled = !state.previousSnapshot;
+    }
+
+    function canSubmitScore() {
+      if (!state.writeContract || !state.walletAddress) return false;
+      if (Number(state.currentChainId) !== CHAIN_CONFIG.chainIdDecimal) return false;
+      if (!state.hasEnded) return false;
+      if (state.score <= 0) return false;
+      if (state.score < state.minimumSubmitScore) return false;
+      if (state.score <= state.bestOnChainScore) return false;
+      if (state.lastSubmittedScore === state.score) return false;
+      return true;
+    }
+
+    function updateSubmissionState() {
+      const reasons = [];
+      if (!state.walletAddress) {
+        reasons.push("Connect a wallet when you are ready to submit an on-chain score.");
+      } else if (Number(state.currentChainId) !== CHAIN_CONFIG.chainIdDecimal) {
+        reasons.push("Switch your wallet to Base Mainnet before submitting.");
+      } else if (!state.hasEnded) {
+        reasons.push("Submission is enabled only after the game reaches a final state.");
+      } else if (state.score < state.minimumSubmitScore) {
+        reasons.push(`This contract only accepts scores from ${state.minimumSubmitScore} and above.`);
+      } else if (state.score <= state.bestOnChainScore) {
+        reasons.push("Only a score that improves your stored on-chain best can be submitted.");
+      } else if (state.lastSubmittedScore === state.score) {
+        reasons.push("This exact score was already submitted in the current session.");
+      } else {
+        reasons.push("This run is ready for on-chain submission.");
+      }
+
+      const ready = canSubmitScore();
+      elements.submitButton.disabled = !ready || state.txState === "pending" || state.txState === "awaiting_signature";
+      elements.submitHint.textContent = reasons[0];
+      elements.submitButton.textContent = state.txState === "awaiting_signature"
+        ? "Awaiting Signature"
+        : state.txState === "pending"
+          ? "Submitting..."
+          : "Submit Score";
+    }
+
+    function formatTimestamp(value) {
+      if (!value) return "Unknown time";
+      const date = new Date(Number(value) * 1000);
+      return date.toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function renderLeaderboard(entries, reasonText) {
+      elements.leaderboardList.innerHTML = "";
+
+      if (!entries.length) {
+        const item = document.createElement("li");
+        item.className = "leaderboard-item";
+        item.innerHTML = `
+          <div class="leaderboard-rank">#</div>
+          <div>
+            <div class="leaderboard-player">No scores yet</div>
+            <div class="leaderboard-time">${reasonText}</div>
+          </div>
+          <div class="leaderboard-score">0</div>
+        `;
+        elements.leaderboardList.appendChild(item);
+        return;
+      }
+
+      entries.forEach((entry, index) => {
+        const item = document.createElement("li");
+        item.className = "leaderboard-item";
+        item.innerHTML = `
+          <div class="leaderboard-rank">${index + 1}</div>
+          <div>
+            <div class="leaderboard-player">${shortenAddress(entry.player)}</div>
+            <div class="leaderboard-time">${formatTimestamp(entry.updatedAt)}</div>
+          </div>
+          <div class="leaderboard-score">${entry.score}</div>
+        `;
+        elements.leaderboardList.appendChild(item);
+      });
+    }
+
+    async function refreshLeaderboard() {
+      if (!state.readContract) {
+        try {
+          await initializeContracts();
+        } catch (error) {
+          renderLeaderboard([], "Base RPC is not reachable right now.");
+          setStatus("danger", "RPC Unavailable", "The app could not reach a Base RPC endpoint to load the leaderboard.");
+          return;
+        }
+      }
+
+      elements.refreshLeaderboardButton.disabled = true;
+
+      try {
+        const entries = await state.readContract.getTopEntries();
+        const normalizedEntries = entries.map((entry) => ({
+          player: entry.player,
+          score: Number(entry.score),
+          updatedAt: Number(entry.updatedAt)
+        }));
+        renderLeaderboard(normalizedEntries, "The contract is live but no score has been stored yet.");
+      } catch (error) {
+        renderLeaderboard([], "The locked contract did not return the expected leaderboard data.");
+        setStatus("danger", "Leaderboard Error", "The locked contract is not responding to the expected score interface.");
+      } finally {
+        elements.refreshLeaderboardButton.disabled = false;
+      }
+    }
+
+    async function refreshPlayerBest() {
+      if (!state.walletAddress || !state.readContract) {
+        state.bestOnChainScore = 0;
+        updateScoreUI();
+        updateSubmissionState();
+        return;
+      }
+
+      try {
+        const best = await state.readContract.getPlayerBestScore(state.walletAddress);
+        state.bestOnChainScore = Number(best);
+      } catch (error) {
+        state.bestOnChainScore = 0;
+      }
+
+      updateScoreUI();
+      updateSubmissionState();
+    }
+
+    async function ensureBaseNetwork() {
+      const chainIdHex = await window.ethereum.request({ method: "eth_chainId" });
+      state.currentChainId = Number.parseInt(chainIdHex, 16);
+      updateNetworkBadge();
+
+      if (state.currentChainId === CHAIN_CONFIG.chainIdDecimal) {
+        return true;
+      }
+
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: CHAIN_CONFIG.chainIdHex }]
+        });
+      } catch (error) {
+        if (error && Number(error.code) === 4902) {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: CHAIN_CONFIG.chainIdHex,
+              chainName: CHAIN_CONFIG.chainName,
+              nativeCurrency: CHAIN_CONFIG.nativeCurrency,
+              rpcUrls: CHAIN_CONFIG.rpcUrls,
+              blockExplorerUrls: CHAIN_CONFIG.blockExplorerUrls
+            }]
+          });
+        } else {
+          throw error;
+        }
+      }
+
+      const updatedChainIdHex = await window.ethereum.request({ method: "eth_chainId" });
+      state.currentChainId = Number.parseInt(updatedChainIdHex, 16);
+      updateNetworkBadge();
+      return state.currentChainId === CHAIN_CONFIG.chainIdDecimal;
+    }
+
+    async function connectWallet() {
+      if (!window.ethereum) {
+        setStatus("danger", "Wallet Missing", "Install a compatible wallet such as MetaMask to connect and submit scores.");
+        return;
+      }
+
+      try {
+        setStatus("success", "Connecting", "Approve the wallet connection request to continue.");
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        state.browserProvider = new ethers.BrowserProvider(window.ethereum);
+        state.signer = await state.browserProvider.getSigner();
+        const address = await state.signer.getAddress();
+        state.walletAddress = ethers.getAddress(address);
+
+        const ready = await ensureBaseNetwork();
+        if (!ready) {
+          throw new Error("Base Mainnet is required.");
+        }
+
+        state.writeContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.signer);
+
+        elements.walletStatusValue.textContent = shortenAddress(state.walletAddress);
+        elements.connectHeroButton.textContent = "Wallet Connected";
+        elements.connectSidebarButton.textContent = "Wallet Connected";
+        elements.connectHeroButton.disabled = true;
+        elements.connectSidebarButton.disabled = true;
+
+        updateNetworkBadge();
+        await refreshPlayerBest();
+        setStatus("success", "Wallet Connected", "The wallet is connected on Base Mainnet and ready for score submission.");
+      } catch (error) {
+        const message = getReadableError(error);
+        setStatus("danger", "Wallet Connection Failed", message);
+      }
+    }
+
+    function getReadableError(error) {
+      const raw = String(
+        error?.shortMessage ||
+        error?.reason ||
+        error?.message ||
+        "Unknown error."
+      );
+
+      if (raw.includes("user rejected") || raw.includes("User denied")) {
+        return "The wallet request was rejected. Local play is still available.";
+      }
+      if (raw.includes("ScoreNotImproved")) {
+        return "This score does not improve your saved on-chain best.";
+      }
+      if (raw.includes("ScoreTooLow")) {
+        return `This contract only accepts scores from ${state.minimumSubmitScore} and above.`;
+      }
+      if (raw.includes("GamePaused")) {
+        return "The score contract is paused right now.";
+      }
+      if (raw.includes("Base Mainnet")) {
+        return "Switch the wallet to Base Mainnet to continue.";
+      }
+
+      return raw;
+    }
+
+    async function submitScore() {
+      if (!canSubmitScore()) {
+        updateSubmissionState();
+        setStatus("danger", "Submission Blocked", elements.submitHint.textContent);
+        return;
+      }
+
+      try {
+        state.txState = "awaiting_signature";
+        updateSubmissionState();
+        setStatus("success", "Awaiting Signature", "Confirm the submit transaction in your wallet.");
+
+        const tx = await state.writeContract.submitScore(BigInt(state.score));
+        state.txState = "pending";
+        updateSubmissionState();
+        setStatus("success", "Transaction Pending", "Waiting for Base Mainnet confirmation.");
+
+        await tx.wait();
+
+        state.txState = "idle";
+        state.lastSubmittedScore = state.score;
+        state.bestOnChainScore = Math.max(state.bestOnChainScore, state.score);
+        updateScoreUI();
+        updateSubmissionState();
+        await refreshLeaderboard();
+        setStatus("success", "Score Submitted", "Your new best score is now stored on Base Mainnet.");
+      } catch (error) {
+        state.txState = "idle";
+        updateSubmissionState();
+        setStatus("danger", "Transaction Failed", getReadableError(error));
+      }
+    }
+
+    function undoMove() {
+      if (!state.previousSnapshot) return;
+      restoreSnapshot(state.previousSnapshot);
+      state.previousSnapshot = null;
+      renderBoard();
+      updateScoreUI();
+      updateSubmissionState();
+      elements.gameStateText.textContent = "Last move restored. You can try a different path.";
+      setStatus("success", "Undo Applied", "The previous board state was restored locally.");
+    }
+
+    function handleKeyboardMove(event) {
+      if (event.target instanceof HTMLInputElement) return;
+
+      const key = event.key.toLowerCase();
+      const map = {
+        arrowup: "up",
+        w: "up",
+        arrowdown: "down",
+        s: "down",
+        arrowleft: "left",
+        a: "left",
+        arrowright: "right",
+        d: "right"
+      };
+
+      const direction = map[key];
+      if (!direction) return;
+
+      event.preventDefault();
+      if (attemptMove(direction)) {
+        setStatus("success", "Move Registered", "Gameplay is local until you decide to submit a final score.");
+      }
+    }
+
+    function onPointerDown(event) {
+      state.pointerActive = true;
+      state.pointerStartX = event.clientX;
+      state.pointerStartY = event.clientY;
+    }
+
+    function onPointerUp(event) {
+      if (!state.pointerActive) return;
+      state.pointerActive = false;
+
+      const diffX = event.clientX - state.pointerStartX;
+      const diffY = event.clientY - state.pointerStartY;
+      const absX = Math.abs(diffX);
+      const absY = Math.abs(diffY);
+      const threshold = 26;
+
+      if (Math.max(absX, absY) < threshold) return;
+
+      const direction = absX > absY
+        ? (diffX > 0 ? "right" : "left")
+        : (diffY > 0 ? "down" : "up");
+
+      if (attemptMove(direction)) {
+        setStatus("success", "Swipe Registered", "Touch input is active and ready for the next move.");
+      }
+    }
+
+    function onPointerCancel() {
+      state.pointerActive = false;
+    }
+
+    function openHelp() {
+      elements.helpModal.classList.add("is-open");
+      elements.helpModal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeHelp() {
+      elements.helpModal.classList.remove("is-open");
+      elements.helpModal.setAttribute("aria-hidden", "true");
+    }
+
+    function attachWalletListeners() {
+      if (!window.ethereum || !window.ethereum.on) return;
+
+      window.ethereum.on("accountsChanged", async (accounts) => {
+        if (!accounts.length) {
+          state.walletAddress = null;
+          state.browserProvider = null;
+          state.signer = null;
+          state.writeContract = null;
+          state.bestOnChainScore = 0;
+          state.currentChainId = null;
+          elements.walletStatusValue.textContent = "Not connected";
+          elements.connectHeroButton.textContent = "Connect Wallet";
+          elements.connectSidebarButton.textContent = "Connect Wallet";
+          elements.connectHeroButton.disabled = false;
+          elements.connectSidebarButton.disabled = false;
+          updateScoreUI();
+          updateNetworkBadge();
+          updateSubmissionState();
+          setStatus("danger", "Wallet Disconnected", "The wallet session ended. Local play remains active.");
+          return;
+        }
+
+        state.walletAddress = ethers.getAddress(accounts[0]);
+        elements.walletStatusValue.textContent = shortenAddress(state.walletAddress);
+        if (state.browserProvider) {
+          state.signer = await state.browserProvider.getSigner();
+          state.writeContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.signer);
+        }
+        await refreshPlayerBest();
+        updateNetworkBadge();
+      });
+
+      window.ethereum.on("chainChanged", async (chainIdHex) => {
+        state.currentChainId = Number.parseInt(chainIdHex, 16);
+        updateNetworkBadge();
+        updateSubmissionState();
+        if (state.walletAddress) {
+          await refreshPlayerBest();
+        }
+      });
+    }
+
+    function attachEvents() {
+      elements.connectHeroButton.addEventListener("click", connectWallet);
+      elements.connectSidebarButton.addEventListener("click", connectWallet);
+      elements.refreshLeaderboardButton.addEventListener("click", refreshLeaderboard);
+      elements.copyContractButton.addEventListener("click", copyContractAddress);
+      elements.newGameButton.addEventListener("click", resetGame);
+      elements.undoButton.addEventListener("click", undoMove);
+      elements.submitButton.addEventListener("click", submitScore);
+      elements.openHelpButton.addEventListener("click", openHelp);
+      elements.closeHelpButton.addEventListener("click", closeHelp);
+      elements.helpModal.addEventListener("click", (event) => {
+        if (event.target === elements.helpModal) closeHelp();
+      });
+      elements.themeToggleButton.addEventListener("click", toggleTheme);
+
+      window.addEventListener("keydown", handleKeyboardMove);
+      elements.boardFrame.addEventListener("pointerdown", onPointerDown);
+      elements.boardFrame.addEventListener("pointerup", onPointerUp);
+      elements.boardFrame.addEventListener("pointercancel", onPointerCancel);
+      elements.boardFrame.addEventListener("pointerleave", onPointerCancel);
+      attachWalletListeners();
+    }
+
+    async function initializeApp() {
+      cacheElements();
+      buildBoardBackground();
+      loadStoredTheme();
+      updateContractLabels();
+      updateNetworkBadge();
+      updateScoreUI();
+      attachEvents();
+
+      try {
+        await initializeContracts();
+        await refreshLeaderboard();
+      } catch (error) {
+        setStatus("danger", "RPC Initialization Failed", "The game is playable, but the leaderboard could not connect to Base RPC yet.");
+      }
+
+      resetGame();
+    }
+
+    window.addEventListener("load", initializeApp);
+  </script>
+</body>
+</html>
