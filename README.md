@@ -1,169 +1,2968 @@
-# Base 2048 Pulse 🎮🔵
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Base 2048 Pulse</title>
+  <meta name="description" content="A polished 2048 game with smooth touch controls, wallet connect, and on-chain score submission on Base Mainnet.">
+  <meta property="og:title" content="Base 2048 Pulse">
+  <meta property="og:description" content="A polished 2048 game on Base Mainnet with wallet connect, multi-range leaderboards, and shareable score runs.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://base2048pulse.vercel.app/">
+  <meta property="og:image" content="https://base2048pulse.vercel.app/assets/farcaster-cover.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Base 2048 Pulse">
+  <meta name="twitter:description" content="A polished 2048 game on Base Mainnet with wallet connect, multi-range leaderboards, and shareable score runs.">
+  <meta name="twitter:image" content="https://base2048pulse.vercel.app/assets/farcaster-cover.png">
+  <meta name="fc:miniapp" content="{&quot;version&quot;:&quot;1&quot;,&quot;imageUrl&quot;:&quot;https://base2048pulse.vercel.app/assets/farcaster-cover.png&quot;,&quot;button&quot;:{&quot;title&quot;:&quot;Play 2048 Pulse&quot;,&quot;action&quot;:{&quot;type&quot;:&quot;launch_miniapp&quot;,&quot;name&quot;:&quot;Base 2048 Pulse&quot;,&quot;url&quot;:&quot;https://base2048pulse.vercel.app/&quot;,&quot;splashImageUrl&quot;:&quot;https://base2048pulse.vercel.app/assets/farcaster-icon.png&quot;,&quot;splashBackgroundColor&quot;:&quot;#07111f&quot;}}}">
+  <meta name="fc:frame" content="{&quot;version&quot;:&quot;1&quot;,&quot;imageUrl&quot;:&quot;https://base2048pulse.vercel.app/assets/farcaster-cover.png&quot;,&quot;button&quot;:{&quot;title&quot;:&quot;Play 2048 Pulse&quot;,&quot;action&quot;:{&quot;type&quot;:&quot;launch_frame&quot;,&quot;name&quot;:&quot;Base 2048 Pulse&quot;,&quot;url&quot;:&quot;https://base2048pulse.vercel.app/&quot;,&quot;splashImageUrl&quot;:&quot;https://base2048pulse.vercel.app/assets/farcaster-icon.png&quot;,&quot;splashBackgroundColor&quot;:&quot;#07111f&quot;}}}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Oxanium:wght@500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --bg-elevated: rgba(10, 18, 34, 0.78);
+      --bg-panel: rgba(13, 24, 45, 0.86);
+      --bg-soft: rgba(255, 255, 255, 0.05);
+      --line: rgba(255, 255, 255, 0.09);
+      --text: #f5fbff;
+      --muted: #92a8c7;
+      --primary: #0052ff;
+      --primary-2: #59d8ff;
+      --success: #1ed8a4;
+      --warning: #ffbe55;
+      --danger: #ff6d87;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+      --tile-empty: rgba(255, 255, 255, 0.045);
+      --tile-text-dark: #06101f;
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+      --board-gap: 12px;
+      --board-size: min(84vw, 520px);
+      --cell-size: calc((var(--board-size) - (var(--board-gap) * 5)) / 4);
+      --tile-2: linear-gradient(180deg, #eef8ff 0%, #d8eefe 100%);
+      --tile-4: linear-gradient(180deg, #fff1bd 0%, #ffd86e 100%);
+      --tile-8: linear-gradient(180deg, #ffc98c 0%, #ff9754 100%);
+      --tile-16: linear-gradient(180deg, #ff9b91 0%, #ff5b68 100%);
+      --tile-32: linear-gradient(180deg, #e298ff 0%, #9d5dff 100%);
+      --tile-64: linear-gradient(180deg, #9bd3ff 0%, #4c8dff 100%);
+      --tile-128: linear-gradient(180deg, #7ef1db 0%, #1fd7ac 100%);
+      --tile-256: linear-gradient(180deg, #a8ffe6 0%, #00d2a2 100%);
+      --tile-512: linear-gradient(180deg, #8fc3ff 0%, #2c72ff 100%);
+      --tile-1024: linear-gradient(180deg, #d9f2ff 0%, #59d8ff 100%);
+      --tile-2048: linear-gradient(135deg, #ffffff 0%, #6cf7ff 48%, #0052ff 100%);
+      --tile-max: linear-gradient(135deg, #ffffff 0%, #89b2ff 38%, #2d4dff 100%);
+    }
 
-A polished 2048 game with smooth desktop and mobile controls, wallet connection, flexible on-chain score submission, multi-range leaderboards, and social sharing on Base Mainnet. ⚡
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #edf4ff;
+      --bg-elevated: rgba(255, 255, 255, 0.8);
+      --bg-panel: rgba(255, 255, 255, 0.88);
+      --bg-soft: rgba(10, 18, 34, 0.05);
+      --line: rgba(7, 17, 31, 0.1);
+      --text: #06101f;
+      --muted: #5d7392;
+      --shadow: 0 24px 80px rgba(9, 37, 83, 0.14);
+      --tile-empty: rgba(7, 17, 31, 0.055);
+    }
 
-## Live Contract 📜
+    * {
+      box-sizing: border-box;
+    }
 
-- Network: `Base Mainnet`
-- Chain ID: `8453`
-- Locked Contract Address: `0xaf73175B8E033B26b334B07823eabb2cbF15E2c7`
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top, rgba(89, 216, 255, 0.16), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(0, 82, 255, 0.16), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Manrope", sans-serif;
+    }
 
-## What Is New ✨
+    body {
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
 
-- `All-Time`, `Weekly`, and `Daily` leaderboard views
-- Score sharing on `X` and `Farcaster`
-- Social links for the project and creator profiles
-- Farcaster Mini App readiness via meta tags, manifest, and runtime SDK support
-- Final Farcaster-ready PNG social assets for reliable embed previews
-- A signed `accountAssociation` in `/.well-known/farcaster.json`
-- Flexible score submission flow for the V2 contract
-- Support for storing all submissions and calculating broader leaderboard ranking
-- Explorer-backed `base.eth` name display in the leaderboard through a small Vercel API route
+    button, input {
+      font: inherit;
+    }
 
-## Repository Purpose 🚀
+    a {
+      color: inherit;
+    }
 
-This repository is designed for a simple GitHub-to-Vercel workflow:
+    .app-shell {
+      width: min(1180px, 100%);
+      display: grid;
+      gap: 20px;
+    }
 
-1. Push the repository to your GitHub account
-2. Import the repository into Vercel
-3. Deploy the frontend plus a tiny Vercel serverless route for leaderboard name tags
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: stretch;
+      gap: 16px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--bg-elevated);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
 
-No database and no build command are required.
+    .hero-copy {
+      max-width: 700px;
+    }
 
-## Files You Need 📦
+    .hero-side {
+      min-width: min(100%, 340px);
+      display: grid;
+      gap: 14px;
+      align-content: start;
+      justify-items: stretch;
+    }
 
-- `index.html` — the full frontend game, UI, wallet flow, leaderboard logic, and Farcaster meta tags
-- `api/address-tag.js` — a lightweight Vercel API route for BaseScan / Etherscan-backed `base.eth` name lookup
-- `.well-known/farcaster.json` — the signed Farcaster Mini App manifest
-- `assets/farcaster-cover.png` — the final stable social preview image
-- `assets/farcaster-icon.png` — the final stable Mini App icon / splash image
-- `Base2048Pulse.sol` — the Remix-compatible Solidity contract source
-- `vercel.json` — minimal Vercel configuration
+    .hero-side .network-badge {
+      justify-self: end;
+    }
 
-## Minimal Deployable Set ✅
+    .hero-contract-card {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at top right, rgba(89, 216, 255, 0.12), transparent 35%),
+        rgba(255, 255, 255, 0.03);
+    }
 
-If you only want the smallest final deployable version of the project, keep these files:
+    .hero-contract-card .section-title {
+      margin-bottom: 14px;
+    }
 
-- `index.html`
-- `Base2048Pulse.sol`
-- `vercel.json`
-- `.well-known/farcaster.json`
-- `api/address-tag.js`
-- `assets/farcaster-cover.png`
-- `assets/farcaster-icon.png`
+    .hero-contract-card .section-title p {
+      max-width: none;
+    }
 
-## Optional Repository Docs 📘
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(0, 82, 255, 0.12);
+      color: var(--primary-2);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
 
-These files are recommended for a complete public repository, but they are not required for the app to run:
+    .brand {
+      margin: 16px 0 10px;
+      font-family: "Oxanium", sans-serif;
+      font-size: clamp(40px, 8vw, 72px);
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+    }
 
-- `README.md`
-- `SECURITY.md`
-- `GITHUB_VERCEL_DEPLOYMENT_GUIDE.md`
-- `FARCASTER_MINIAPP_PUBLISH_GUIDE.md`
-- `.env.example`
-- `.gitignore`
+    .brand span {
+      color: var(--primary-2);
+    }
 
-## Recommended Repository Structure 🗂️
+    .hero p {
+      margin: 0;
+      max-width: 680px;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 15px;
+    }
 
-```text
-.
-├── Base2048Pulse.sol
-├── README.md
-├── SECURITY.md
-├── GITHUB_VERCEL_DEPLOYMENT_GUIDE.md
-├── FARCASTER_MINIAPP_PUBLISH_GUIDE.md
-├── .env.example
-├── .well-known/
-│   └── farcaster.json
-├── api/
-│   └── address-tag.js
-├── assets/
-│   ├── farcaster-cover.png
-│   └── farcaster-icon.png
-├── index.html
-├── vercel.json
-└── .gitignore
-```
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
 
-## Smart Contract Interface 🧠
+    .shell-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 20px;
+      align-items: stretch;
+    }
 
-The frontend expects this contract interface:
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--bg-panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
 
-```solidity
-function paused() view returns (bool)
-function minimumSubmitScore() view returns (uint256)
-function getEntryCount() view returns (uint256)
-function getTopEntries() view returns ((address player,uint256 score,uint256 updatedAt)[])
-function getPlayerBestScore(address player) view returns (uint256)
-function getSubmissionCount() view returns (uint256)
-function getSubmission(uint256 index) view returns ((uint256 submissionId,address player,uint256 score,uint256 timestamp))
-function getSubmissions(uint256 start,uint256 limit) view returns ((uint256 submissionId,address player,uint256 score,uint256 timestamp)[])
-function getPlayerSubmissionIds(address player) view returns (uint256[])
-function submitScore(uint256 score)
-```
+    .game-panel {
+      padding: 24px;
+    }
 
-## Security Model 🛡️
+    .sidebar {
+      display: grid;
+      gap: 20px;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
 
-This project is intentionally narrow in scope:
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
 
-- The contract stores scores only
-- The frontend does not request token approvals
-- The frontend does not request permit signatures
-- The frontend does not ask users to transfer assets
-- The game remains playable without a wallet
-- A wallet is only needed for on-chain score submission
-- The V2 contract accepts score submissions at any point in a run
+    .title-group h1 {
+      margin: 0;
+      font-family: "Oxanium", sans-serif;
+      font-size: 40px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
 
-Read `SECURITY.md` before publishing.
+    .title-group p {
+      margin: 10px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
 
-## Local Test 🧪
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 12px;
+    }
 
-You can test the UI locally with any static file server, but the explorer-backed leaderboard name tag route is intended for Vercel deployment.
+    .chip {
+      min-width: 110px;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      text-align: right;
+    }
 
-Example:
+    .chip-label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 800;
+    }
 
-```bash
-python3 -m http.server 4173
-```
+    .chip-value {
+      display: block;
+      margin-top: 8px;
+      font-family: "Oxanium", sans-serif;
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 800;
+    }
 
-Then open:
+    .chip-value.success {
+      color: var(--success);
+    }
 
-```text
-http://127.0.0.1:4173/
-```
+    .board-wrap {
+      padding: 0;
+    }
 
-For final Farcaster assets, also verify these paths after deployment:
+    .board-frame {
+      position: relative;
+      width: var(--board-size);
+      max-width: 100%;
+      margin: 0 auto;
+      border-radius: 28px;
+      padding: var(--board-gap);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
 
-```text
-https://base2048pulse.vercel.app/assets/farcaster-cover.png
-https://base2048pulse.vercel.app/assets/farcaster-icon.png
-https://base2048pulse.vercel.app/.well-known/farcaster.json
-```
+    .game-over-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: inherit;
+      background: rgba(7, 17, 31, 0.78);
+      backdrop-filter: blur(10px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+      z-index: 3;
+    }
 
-## GitHub to Vercel Flow 🌐
+    .game-over-overlay.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
 
-Follow the exact steps in:
+    .game-over-modal {
+      display: grid;
+      gap: 16px;
+      justify-items: center;
+      text-align: center;
+      padding: 24px;
+    }
 
-- `GITHUB_VERCEL_DEPLOYMENT_GUIDE.md`
-- `FARCASTER_MINIAPP_PUBLISH_GUIDE.md`
+    .game-over-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
 
-## Before Publishing ✅
+    .game-over-title {
+      font-family: "Oxanium", sans-serif;
+      font-size: clamp(40px, 8vw, 68px);
+      line-height: 0.94;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--danger);
+      text-shadow: 0 0 22px rgba(255, 109, 135, 0.35);
+    }
 
-- Verify the contract on BaseScan
-- Optionally add `ETHERSCAN_API_KEY` in Vercel Project Settings for the most reliable explorer metadata lookup
-- Test one real wallet connection on Base Mainnet
-- Test one real score submission
-- Confirm the leaderboard refreshes correctly
-- Confirm `Daily`, `Weekly`, and `All-Time` views load correctly
-- Confirm X and Farcaster share actions open the correct compose flows
-- Confirm the Farcaster preview image and icon load from the deployed `assets/` directory
-- Confirm the signed Mini App manifest is reachable at `/.well-known/farcaster.json`
-- Confirm the deployed contract address is correct in `index.html`
-- If you plan to launch in Farcaster, follow `FARCASTER_MINIAPP_PUBLISH_GUIDE.md`
+    .game-over-subtitle {
+      max-width: 320px;
+      color: #f8dbe4;
+      font-size: 14px;
+      line-height: 1.7;
+    }
 
-## Notes ℹ️
+    .button-success {
+      background: linear-gradient(135deg, #14c784 0%, #33e0a1 100%);
+      color: #042218;
+      border: none;
+      box-shadow: 0 14px 30px rgba(20, 199, 132, 0.24);
+    }
 
-- This build is locked to a single deployed contract
-- The contract address is intentionally not editable in the UI
-- The current production contract is the V2 submission-friendly contract
-- If you redeploy a new contract later, update the hardcoded address in `index.html` before pushing a new version
+    .board-bg {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--board-gap);
+    }
+
+    .cell {
+      aspect-ratio: 1 / 1;
+      border-radius: 18px;
+      background: var(--tile-empty);
+    }
+
+    .tile-layer {
+      position: absolute;
+      inset: var(--board-gap);
+      pointer-events: none;
+    }
+
+    .tile {
+      position: absolute;
+      width: var(--cell-size);
+      height: var(--cell-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 18px;
+      font-family: "Oxanium", sans-serif;
+      font-weight: 800;
+      color: var(--tile-text-dark);
+      letter-spacing: -0.04em;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+      transition: transform 150ms ease, top 150ms ease, left 150ms ease;
+      animation: tile-pop 150ms ease;
+    }
+
+    .tile.size-small {
+      font-size: clamp(26px, 4vw, 36px);
+    }
+
+    .tile.size-medium {
+      font-size: clamp(24px, 3.6vw, 32px);
+    }
+
+    .tile.size-large {
+      font-size: clamp(20px, 3vw, 26px);
+    }
+
+    .tile[data-value="2"] { background: var(--tile-2); }
+    .tile[data-value="4"] { background: var(--tile-4); }
+    .tile[data-value="8"] { background: var(--tile-8); }
+    .tile[data-value="16"] { background: var(--tile-16); }
+    .tile[data-value="32"] { background: var(--tile-32); color: #fff; }
+    .tile[data-value="64"] { background: var(--tile-64); color: #fff; }
+    .tile[data-value="128"] { background: var(--tile-128); }
+    .tile[data-value="256"] { background: var(--tile-256); }
+    .tile[data-value="512"] { background: var(--tile-512); color: #fff; }
+    .tile[data-value="1024"] { background: var(--tile-1024); }
+    .tile[data-value="2048"] { background: var(--tile-2048); }
+    .tile[data-super="true"] { background: var(--tile-max); color: #041123; }
+
+    @keyframes tile-pop {
+      from {
+        transform: scale(0.84);
+        opacity: 0.2;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 18px 0 8px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 14px 18px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 140ms ease, opacity 140ms ease, background 140ms ease, border-color 140ms ease, color 140ms ease;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.52;
+      transform: none;
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, #3f7cff 100%);
+      color: #fff;
+      box-shadow: 0 14px 30px rgba(0, 82, 255, 0.28);
+    }
+
+    .button-secondary {
+      background: var(--bg-soft);
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .button-ghost {
+      background: transparent;
+      color: var(--muted);
+      border-color: var(--line);
+    }
+
+    .button:hover:not(:disabled),
+    .button:focus-visible:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .button:focus-visible,
+    .input:focus-visible,
+    .link-button:focus-visible {
+      outline: 2px solid var(--primary-2);
+      outline-offset: 2px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .status-card,
+    .stack-card {
+      padding: 20px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-title h2,
+    .section-title h3 {
+      margin: 0;
+      font-family: "Oxanium", sans-serif;
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .section-title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .network-badge,
+    .tiny-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--warning);
+      box-shadow: 0 0 18px rgba(255, 190, 85, 0.44);
+    }
+
+    .dot.success {
+      background: var(--success);
+      box-shadow: 0 0 18px rgba(30, 216, 164, 0.44);
+    }
+
+    .dot.danger {
+      background: var(--danger);
+      box-shadow: 0 0 18px rgba(255, 109, 135, 0.44);
+    }
+
+    .wallet-card,
+    .security-card,
+    .leaderboard-card {
+      padding: 20px;
+    }
+
+    .wallet-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .meta-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mini {
+      border: 1px solid var(--line);
+      background: var(--bg-soft);
+      padding: 14px;
+      border-radius: var(--radius-md);
+    }
+
+    .mini-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .mini-value {
+      margin-top: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .status-banner {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: var(--bg-soft);
+      min-height: 76px;
+    }
+
+    .status-banner strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .status-banner p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .leaderboard-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+      flex: 1 1 auto;
+      align-content: start;
+    }
+
+    .leaderboard-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--bg-soft);
+    }
+
+    .leaderboard-rank {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(0, 82, 255, 0.14);
+      color: var(--primary-2);
+      font-family: "Oxanium", sans-serif;
+      font-weight: 800;
+    }
+
+    .leaderboard-player {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .leaderboard-time {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .leaderboard-score {
+      font-family: "Oxanium", sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--success);
+      white-space: nowrap;
+    }
+
+    .security-list {
+      padding-left: 18px;
+      margin: 0;
+      color: var(--muted);
+      display: grid;
+      gap: 10px;
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .input {
+      flex: 1 1 220px;
+      min-width: 0;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
+      padding: 14px 16px;
+    }
+
+    .link-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .link-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      text-decoration: none;
+      background: var(--bg-soft);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .social-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+    }
+
+    .social-link:hover,
+    .social-link:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(89, 216, 255, 0.55);
+      background: rgba(89, 216, 255, 0.09);
+    }
+
+    .social-icon {
+      width: 18px;
+      height: 18px;
+      display: inline-block;
+      fill: currentColor;
+    }
+
+    .share-panel {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at top right, rgba(89, 216, 255, 0.12), transparent 35%),
+        rgba(255, 255, 255, 0.025);
+    }
+
+    .share-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .share-button {
+      justify-content: center;
+    }
+
+    .share-note {
+      margin: 0 0 14px;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 13px;
+    }
+
+    .leaderboard-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .leaderboard-tab {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--bg-soft);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+    }
+
+    .leaderboard-tab.active {
+      color: #041123;
+      background: linear-gradient(135deg, var(--accent-soft, #7ce3ff), #4da3ff);
+      border-color: transparent;
+    }
+
+    .leaderboard-caption {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .leaderboard-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    .security-card {
+      position: relative;
+      overflow: hidden;
+      width: min(860px, 100%);
+      justify-self: center;
+      background:
+        radial-gradient(circle at top right, rgba(45, 212, 191, 0.12), transparent 33%),
+        radial-gradient(circle at bottom left, rgba(255, 214, 10, 0.08), transparent 30%),
+        var(--bg-panel);
+    }
+
+    .safety-badge {
+      color: #dffcf4;
+      background: rgba(45, 212, 191, 0.12);
+      border-color: rgba(45, 212, 191, 0.22);
+    }
+
+    .security-card .section-title h3,
+    .security-copy strong {
+      font-family: "Oxanium", sans-serif;
+      letter-spacing: -0.02em;
+    }
+
+    .game-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .game-over-text {
+      color: #ff6d87;
+      font-family: "Oxanium", sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .try-again-button {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 109, 135, 0.35);
+      background: rgba(255, 109, 135, 0.1);
+      color: #ffd6de;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .is-hidden {
+      display: none !important;
+    }
+
+    .security-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .security-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(8, 19, 36, 0.42);
+    }
+
+    .security-icon {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(45, 212, 191, 0.15);
+      font-size: 18px;
+      box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.18) inset;
+    }
+
+    .security-copy strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #ecfff8;
+      font-size: 14px;
+    }
+
+    .security-copy p {
+      margin: 0;
+      color: #b9d4cf;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.7;
+      padding: 4px 12px 22px;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(3, 9, 18, 0.76);
+      backdrop-filter: blur(16px);
+      z-index: 40;
+    }
+
+    .modal.is-open {
+      display: grid;
+    }
+
+    .modal-card {
+      width: min(540px, 100%);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--line);
+      background: var(--bg-panel);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .modal-card h3 {
+      margin: 0;
+      font-family: "Oxanium", sans-serif;
+      font-size: 28px;
+    }
+
+    .modal-card p,
+    .modal-card li {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .modal-card ol {
+      margin: 18px 0 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 980px) {
+      .shell-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        flex-direction: column;
+      }
+
+      .hero-side {
+        min-width: 0;
+      }
+
+      .hero-side .network-badge {
+        justify-self: start;
+      }
+
+      .top-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .chips {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 12px;
+      }
+
+      .hero,
+      .game-panel,
+      .wallet-card,
+      .leaderboard-card,
+      .security-card,
+      .status-card {
+        padding: 18px;
+        border-radius: 22px;
+      }
+
+      .brand {
+        font-size: 48px;
+      }
+
+      .title-group h1 {
+        font-size: 34px;
+      }
+
+      .chip {
+        min-width: calc(50% - 6px);
+        text-align: left;
+      }
+
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls .button,
+      .hero-actions .button,
+      .share-grid .button {
+        width: 100%;
+      }
+
+      .leaderboard-item {
+        grid-template-columns: auto 1fr;
+      }
+
+      .leaderboard-score {
+        grid-column: 2;
+        justify-self: start;
+      }
+
+      .share-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <section class="hero panel">
+      <div class="hero-copy">
+        <div class="eyebrow">Base Mainnet • Single File Build</div>
+        <div class="brand">2048 <span>Pulse</span></div>
+        <p>
+          A smoother, safer, and more user-friendly 2048 experience for desktop and mobile. Play locally with zero wallet friction,
+          then connect and submit your final score to Base Mainnet when the game ends.
+        </p>
+        <div class="hero-actions">
+          <button id="connectHeroButton" class="button button-primary" type="button">Connect Wallet</button>
+          <button id="openHelpButton" class="button button-secondary" type="button">How To Play</button>
+          <button id="themeToggleButton" class="button button-ghost" type="button">Toggle Theme</button>
+        </div>
+        <div class="social-strip">
+          <a class="social-link" href="https://x.com/amircrypto82" target="_blank" rel="noreferrer">
+            <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.901 1.154h3.68l-8.04 9.188 9.458 12.504h-7.406l-5.8-7.58-6.633 7.58H.48l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932Zm-1.292 19.488h2.039L6.486 3.24H4.298l13.311 17.402Z"/></svg>
+            <span>@amircrypto82</span>
+          </a>
+          <a class="social-link" href="https://farcaster.xyz/amircrypto82" target="_blank" rel="noreferrer">
+            <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.75 3.25h8.5a4.5 4.5 0 0 1 4.5 4.5v8.5a4.5 4.5 0 0 1-4.5 4.5h-8.5a4.5 4.5 0 0 1-4.5-4.5v-8.5a4.5 4.5 0 0 1 4.5-4.5Zm.2 2.5a2.2 2.2 0 0 0-2.2 2.2v8.1a2.2 2.2 0 0 0 2.2 2.2h8.1a2.2 2.2 0 0 0 2.2-2.2v-8.1a2.2 2.2 0 0 0-2.2-2.2h-2.05v3.28l-1.35-1.05-1.65 1.3-1.66-1.3-1.34 1.05V5.75H7.95Zm.86 6.53 2.19-1.72 2.19 1.72 1.56-1.22v5.19h-1.95v-1.83h-1.6v1.83H8.25v-5.19l1.56 1.22Z"/></svg>
+            <span>@amircrypto82 FC</span>
+          </a>
+          <a class="social-link" href="https://github.com/arm1383/Base2048Pulse" target="_blank" rel="noreferrer">
+            <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12.08c0 5.14 3.3 9.49 7.88 11.03.58.11.79-.26.79-.57 0-.28-.01-1.21-.02-2.19-3.21.71-3.89-1.39-3.89-1.39-.52-1.35-1.28-1.7-1.28-1.7-1.05-.73.08-.71.08-.71 1.16.09 1.78 1.21 1.78 1.21 1.03 1.79 2.71 1.27 3.37.97.1-.76.4-1.27.73-1.56-2.56-.3-5.26-1.3-5.26-5.79 0-1.28.45-2.33 1.2-3.15-.12-.3-.52-1.52.11-3.18 0 0 .98-.32 3.2 1.2a10.94 10.94 0 0 1 5.82 0c2.21-1.52 3.19-1.2 3.19-1.2.63 1.66.23 2.88.11 3.18.75.82 1.2 1.87 1.2 3.15 0 4.5-2.7 5.49-5.28 5.78.41.36.78 1.06.78 2.14 0 1.55-.01 2.79-.01 3.17 0 .31.21.68.8.57A11.59 11.59 0 0 0 23.5 12.08C23.5 5.65 18.35.5 12 .5Z"/></svg>
+            <span>Project Repo</span>
+          </a>
+        </div>
+      </div>
+      <div class="hero-side">
+        <div class="network-badge" id="networkBadge">
+          <span class="dot" id="networkDot"></span>
+          <span id="networkBadgeText">Read-only Mode</span>
+        </div>
+        <section class="hero-contract-card">
+          <div class="section-title">
+            <div>
+              <h3>Contract</h3>
+              <p>This build is locked to the live Base Mainnet score contract.</p>
+            </div>
+          </div>
+          <div class="meta-grid">
+            <div class="mini">
+              <div class="mini-label">Contract Address</div>
+              <div class="mini-value" id="savedContractValue">Locked at build time</div>
+            </div>
+            <div class="mini">
+              <div class="mini-label">Network</div>
+              <div class="mini-value" id="chainLabelValue">Base Mainnet (8453)</div>
+            </div>
+          </div>
+          <div class="link-row">
+            <button id="copyContractButton" class="link-button" type="button">Copy Address</button>
+            <a id="contractExplorerLink" class="link-button" href="https://basescan.org/" target="_blank" rel="noreferrer">Open BaseScan</a>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <div class="shell-grid">
+      <section class="panel game-panel">
+        <div class="top-row">
+          <div class="title-group">
+            <h1>2048 Arena</h1>
+            <p>Swipe on mobile or use Arrow keys / W A S D on desktop.</p>
+          </div>
+          <div class="chips">
+            <div class="chip">
+              <span class="chip-label">Score</span>
+              <span class="chip-value" id="scoreValue">0</span>
+            </div>
+            <div class="chip">
+              <span class="chip-label">Best Local</span>
+              <span class="chip-value success" id="bestLocalValue">0</span>
+            </div>
+            <div class="chip">
+              <span class="chip-label">Best On-chain</span>
+              <span class="chip-value success" id="bestOnChainValue">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="board-wrap">
+          <div class="board-frame" id="boardFrame" aria-label="2048 board" role="application">
+            <div class="board-bg" id="boardBackground"></div>
+            <div class="tile-layer" id="tileLayer"></div>
+            <div id="gameOverOverlay" class="game-over-overlay" aria-hidden="true">
+              <div class="game-over-modal">
+                <div class="game-over-title">Game Over</div>
+                <div class="game-over-subtitle">Your run has ended. Submit your score on Base or start a fresh board.</div>
+                <div class="game-over-actions">
+                  <button id="overlaySubmitButton" class="button button-primary" type="button">Submit Score</button>
+                  <button id="overlayTryAgainButton" class="button button-success" type="button">Try Again</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="newGameButton" class="button button-primary" type="button">New Game</button>
+          <button id="undoButton" class="button button-secondary" type="button">Undo</button>
+          <button id="submitButton" class="button button-secondary" type="button">Submit Score</button>
+        </div>
+
+        <div class="meta-row">
+          <div class="hint game-status" id="gameStateText">Start moving to build your first chain.</div>
+          <div class="tiny-badge" id="submitHint">Local play is always available.</div>
+        </div>
+
+        <section class="share-panel">
+          <div class="section-title">
+            <div>
+              <h3>Share Your Run</h3>
+              <p>Broadcast your live score or final run on X and Farcaster.</p>
+            </div>
+          </div>
+          <p class="share-note">Share buttons stay local-browser friendly, and switch to native Farcaster compose flow when the app runs inside a Mini App host.</p>
+          <div class="share-grid">
+            <button id="shareXButton" class="button button-secondary share-button" type="button">Share on X</button>
+            <button id="shareFarcasterButton" class="button button-secondary share-button" type="button">Share on Farcaster</button>
+          </div>
+        </section>
+      </section>
+
+      <aside class="sidebar">
+        <section class="panel wallet-card">
+          <div class="section-title">
+            <div>
+              <h2>Wallet</h2>
+              <p>Connect only when you want to submit an on-chain score.</p>
+            </div>
+          </div>
+          <div class="wallet-grid">
+            <div class="status-banner" id="statusBanner" aria-live="polite">
+              <span class="dot" id="statusDot"></span>
+              <div>
+                <strong id="statusTitle">Ready</strong>
+                <p id="statusText">The game is playable right now without a wallet.</p>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div class="mini">
+                <div class="mini-label">Wallet Status</div>
+                <div class="mini-value" id="walletStatusValue">Not connected</div>
+              </div>
+              <div class="mini">
+                <div class="mini-label">Active Network</div>
+                <div class="mini-value" id="walletNetworkValue">Read-only</div>
+              </div>
+            </div>
+
+            <button id="connectSidebarButton" class="button button-primary" type="button">Connect Wallet</button>
+            <p class="hint">When configured, iPhone Safari uses WalletConnect / Reown if no Mini App or injected wallet provider is available.</p>
+          </div>
+        </section>
+
+        <section class="panel leaderboard-card">
+          <div class="section-title">
+            <div>
+              <h3>Leaderboard</h3>
+              <p>Switch between daily, weekly, and all-time views.</p>
+            </div>
+            <button id="refreshLeaderboardButton" class="button button-ghost" type="button">Refresh</button>
+          </div>
+          <div class="leaderboard-tabs" role="tablist" aria-label="Leaderboard range">
+            <button class="leaderboard-tab active" type="button" data-range="all">All-Time</button>
+            <button class="leaderboard-tab" type="button" data-range="weekly">Weekly</button>
+            <button class="leaderboard-tab" type="button" data-range="daily">Daily</button>
+          </div>
+          <p class="leaderboard-caption" id="leaderboardCaption">All-time scores are loaded from persistent contract storage. Daily and weekly views are derived from recent on-chain score events.</p>
+          <ul class="leaderboard-list" id="leaderboardList" aria-live="polite">
+            <li class="leaderboard-item">
+              <div class="leaderboard-rank">#</div>
+              <div>
+                <div class="leaderboard-player">Loading contract leaderboard</div>
+                <div class="leaderboard-time">Scores are fetched from the locked Base Mainnet contract.</div>
+              </div>
+              <div class="leaderboard-score">--</div>
+            </li>
+          </ul>
+        </section>
+
+      </aside>
+    </div>
+
+    <section class="panel security-card">
+      <div class="section-title">
+        <div>
+          <h3>Safety Notes</h3>
+          <p>This build is tuned for clear trust signals, low wallet risk, and predictable on-chain behavior.</p>
+        </div>
+        <div class="tiny-badge safety-badge">🛡️ Trust Layer</div>
+      </div>
+      <div class="security-grid">
+        <div class="security-item">
+          <div class="security-icon">🔐</div>
+          <div class="security-copy">
+            <strong>Score Storage Only</strong>
+            <p>The smart contract is designed for score tracking and should not custody user funds.</p>
+          </div>
+        </div>
+        <div class="security-item">
+          <div class="security-icon">🚫</div>
+          <div class="security-copy">
+            <strong>No Approvals</strong>
+            <p>The frontend does not ask for token approvals, permit signatures, or asset transfer permissions.</p>
+          </div>
+        </div>
+        <div class="security-item">
+          <div class="security-icon">🧭</div>
+          <div class="security-copy">
+            <strong>Base Mainnet Guardrails</strong>
+            <p>If the wallet is on the wrong network, the app attempts a normal Base Mainnet switch or add-chain flow.</p>
+          </div>
+        </div>
+        <div class="security-item">
+          <div class="security-icon">📣</div>
+          <div class="security-copy">
+            <strong>Farcaster Mini App Live</strong>
+            <p>The site now includes live Mini App metadata, signed manifest support, and production preview assets for Farcaster publishing.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-note">
+      This build is locked to the deployed Base Mainnet contract, supports shareable score runs, and is fully deployed for Vercel and Farcaster Mini App publishing.
+    </div>
+  </div>
+
+  <div class="modal" id="helpModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="section-title">
+        <div>
+          <h3>How It Works</h3>
+          <p>Quick usage notes for the full on-chain flow.</p>
+        </div>
+        <button id="closeHelpButton" class="button button-ghost" type="button">Close</button>
+      </div>
+      <ol>
+        <li>Play locally and keep moving as long as you want.</li>
+        <li>Connect your wallet only when you are ready to submit a valid final score.</li>
+        <li>Switch to Base Mainnet if prompted by your wallet.</li>
+        <li>You can submit your current score at any point in a run, even before game over.</li>
+        <li>Refresh the leaderboard after confirmation to see the updated ranking.</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+    const DEFAULT_CONTRACT_ADDRESS = "0xaf73175B8E033B26b334B07823eabb2cbF15E2c7";
+    const STORAGE_KEYS = {
+      theme: "base2048-theme",
+      bestLocal: "base2048-best-local"
+    };
+
+    const CHAIN_CONFIG = {
+      chainIdHex: "0x2105",
+      chainIdDecimal: 8453,
+      chainName: "Base Mainnet",
+      nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+      rpcUrls: [
+        "https://mainnet.base.org",
+        "https://base.llamarpc.com",
+        "https://base-rpc.publicnode.com"
+      ],
+      blockExplorerUrls: ["https://basescan.org"]
+    };
+
+    const CONTRACT_ABI = [
+      "function paused() view returns (bool)",
+      "function minimumSubmitScore() view returns (uint256)",
+      "function getEntryCount() view returns (uint256)",
+      "function getTopEntries() view returns ((address player,uint256 score,uint256 updatedAt)[])",
+      "function getPlayerBestScore(address player) view returns (uint256)",
+      "function getSubmissionCount() view returns (uint256)",
+      "function getSubmission(uint256 index) view returns ((uint256 submissionId,address player,uint256 score,uint256 timestamp))",
+      "function getSubmissions(uint256 start,uint256 limit) view returns ((uint256 submissionId,address player,uint256 score,uint256 timestamp)[])",
+      "function getPlayerSubmissionIds(address player) view returns (uint256[])",
+      "function submitScore(uint256 score)",
+      "event ScoreSubmitted(address indexed player, uint256 score, uint256 previousBest, uint256 timestamp)"
+    ];
+
+    const CONTRACT_INTERFACE = new ethers.Interface(CONTRACT_ABI);
+    const SCORE_SUBMITTED_TOPIC = ethers.id("ScoreSubmitted(address,uint256,uint256,uint256)");
+    const APP_URL = "https://base2048pulse.vercel.app/";
+    const ADDRESS_TAG_API_PATH = "/api/address-tag";
+    const ENS_MAINNET_RPC_URLS = [
+      "https://ethereum-rpc.publicnode.com",
+      "https://cloudflare-eth.com",
+      "https://eth.llamarpc.com"
+    ];
+    const ENS_MAINNET_REGISTRY_ADDRESS = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e";
+    const BASE_ENSIP19_REVERSE_NAMESPACE = "80002105.reverse";
+    const ENS_REGISTRY_ABI = [
+      "function resolver(bytes32 node) view returns (address)"
+    ];
+    const ENS_NAME_RESOLVER_ABI = [
+      "function name(bytes32 node) view returns (string)"
+    ];
+    const MINIAPP_HOST_TIMEOUT_MS = 1500;
+    const MINIAPP_WALLET_TIMEOUT_MS = 2500;
+    const REOWN_PROJECT_ID = "REPLACE_WITH_REOWN_PROJECT_ID";
+    const REOWN_REQUIRED_MESSAGE = "Safari wallet support is prepared, but the Reown projectId is still placeholder-only. Replace REOWN_PROJECT_ID in index.html to activate WalletConnect on mobile browsers.";
+    const LEADERBOARD_CONFIG = {
+      all: {
+        label: "All-Time",
+        reason: "All-time scores are loaded from persistent contract storage."
+      },
+      weekly: {
+        label: "Weekly",
+        seconds: 7 * 24 * 60 * 60,
+        lookbackBlocks: 360000,
+        reason: "Weekly scores are derived from recent on-chain score submission events."
+      },
+      daily: {
+        label: "Daily",
+        seconds: 24 * 60 * 60,
+        lookbackBlocks: 56000,
+        reason: "Daily scores are derived from on-chain score submission events in the last 24 hours."
+      }
+    };
+
+    const state = {
+      board: new Array(16).fill(0),
+      score: 0,
+      bestLocalScore: Number(localStorage.getItem(STORAGE_KEYS.bestLocal) || "0"),
+      bestOnChainScore: 0,
+      previousSnapshot: null,
+      hasEnded: false,
+      hasWon: false,
+      txState: "idle",
+      lastSubmittedScore: null,
+      walletAddress: null,
+      contractAddress: DEFAULT_CONTRACT_ADDRESS,
+      currentChainId: null,
+      readProvider: null,
+      readContract: null,
+      browserProvider: null,
+      walletProvider: null,
+      walletConnectProvider: null,
+      walletConnectModal: null,
+      walletSource: "none",
+      walletListenerProvider: null,
+      walletAccountsChangedHandler: null,
+      walletChainChangedHandler: null,
+      signer: null,
+      writeContract: null,
+      minimumSubmitScore: 0,
+      pointerStartX: 0,
+      pointerStartY: 0,
+      pointerActive: false,
+      leaderboardRange: "all",
+      leaderboards: {
+        all: null,
+        weekly: null,
+        daily: null
+      },
+      farcasterSdk: null,
+      isMiniApp: false,
+      contractMode: "legacy",
+      allSubmissionsCache: null,
+      basenameCache: new Map(),
+      basenamePending: new Map(),
+      ensMainnetProvider: null,
+      ensRegistry: null
+    };
+
+    const elements = {};
+
+    function cacheElements() {
+      Object.assign(elements, {
+        boardBackground: document.getElementById("boardBackground"),
+        tileLayer: document.getElementById("tileLayer"),
+        boardFrame: document.getElementById("boardFrame"),
+        gameOverOverlay: document.getElementById("gameOverOverlay"),
+        overlaySubmitButton: document.getElementById("overlaySubmitButton"),
+        overlayTryAgainButton: document.getElementById("overlayTryAgainButton"),
+        scoreValue: document.getElementById("scoreValue"),
+        bestLocalValue: document.getElementById("bestLocalValue"),
+        bestOnChainValue: document.getElementById("bestOnChainValue"),
+        gameStateText: document.getElementById("gameStateText"),
+        submitHint: document.getElementById("submitHint"),
+        walletStatusValue: document.getElementById("walletStatusValue"),
+        walletNetworkValue: document.getElementById("walletNetworkValue"),
+        statusBanner: document.getElementById("statusBanner"),
+        statusTitle: document.getElementById("statusTitle"),
+        statusText: document.getElementById("statusText"),
+        statusDot: document.getElementById("statusDot"),
+        connectHeroButton: document.getElementById("connectHeroButton"),
+        connectSidebarButton: document.getElementById("connectSidebarButton"),
+        refreshLeaderboardButton: document.getElementById("refreshLeaderboardButton"),
+        savedContractValue: document.getElementById("savedContractValue"),
+        chainLabelValue: document.getElementById("chainLabelValue"),
+        copyContractButton: document.getElementById("copyContractButton"),
+        contractExplorerLink: document.getElementById("contractExplorerLink"),
+        leaderboardList: document.getElementById("leaderboardList"),
+        leaderboardCaption: document.getElementById("leaderboardCaption"),
+        newGameButton: document.getElementById("newGameButton"),
+        undoButton: document.getElementById("undoButton"),
+        submitButton: document.getElementById("submitButton"),
+        shareXButton: document.getElementById("shareXButton"),
+        shareFarcasterButton: document.getElementById("shareFarcasterButton"),
+        networkBadgeText: document.getElementById("networkBadgeText"),
+        networkDot: document.getElementById("networkDot"),
+        openHelpButton: document.getElementById("openHelpButton"),
+        closeHelpButton: document.getElementById("closeHelpButton"),
+        helpModal: document.getElementById("helpModal"),
+        themeToggleButton: document.getElementById("themeToggleButton"),
+        leaderboardTabs: Array.from(document.querySelectorAll(".leaderboard-tab"))
+      });
+    }
+
+    function withTimeout(promiseLike, timeoutMs, fallbackValue = null) {
+      return Promise.race([
+        Promise.resolve(promiseLike),
+        new Promise((resolve) => {
+          window.setTimeout(() => resolve(fallbackValue), timeoutMs);
+        })
+      ]);
+    }
+
+    function hasConfiguredReownProjectId() {
+      return typeof REOWN_PROJECT_ID === "string" &&
+        REOWN_PROJECT_ID.trim() !== "" &&
+        REOWN_PROJECT_ID !== "REPLACE_WITH_REOWN_PROJECT_ID";
+    }
+
+    function isUsableEip1193Provider(provider) {
+      return Boolean(provider && typeof provider.request === "function");
+    }
+
+    function getProviderSourceLabel(source) {
+      if (source === "miniapp") return "Farcaster Mini App";
+      if (source === "injected") return "Browser Wallet";
+      if (source === "walletconnect") return "WalletConnect";
+      return "Unknown";
+    }
+
+    function isLikelySafariBrowser() {
+      const userAgent = navigator.userAgent || "";
+      return /Safari/i.test(userAgent) && !/Chrome|CriOS|Chromium|Android|FxiOS|EdgiOS/i.test(userAgent);
+    }
+
+    function getWalletMissingMessage(source, hostedMiniApp) {
+      if (source === "walletconnect_unconfigured") {
+        return REOWN_REQUIRED_MESSAGE;
+      }
+
+      if (hostedMiniApp || state.isMiniApp) {
+        return "This mobile client did not expose a usable Ethereum wallet provider to the Mini App. If you are testing inside Base App or another in-app browser, try opening the Mini App in Warpcast. If you are already in Warpcast, update the app and test again.";
+      }
+
+      if (isLikelySafariBrowser()) {
+        return hasConfiguredReownProjectId()
+          ? "No injected wallet was detected in iPhone Safari, so the app is ready to use the WalletConnect / Reown fallback. If nothing opens, confirm that the WalletConnect bundle can load and that your mobile wallet supports WalletConnect."
+          : "No injected wallet was detected in iPhone Safari. Replace the placeholder REOWN_PROJECT_ID in index.html to activate the WalletConnect / Reown fallback.";
+      }
+
+      return hasConfiguredReownProjectId()
+        ? "No injected wallet was detected in this browser. The app will fall back to WalletConnect / Reown where that flow is supported."
+        : "No injected wallet was detected in this browser. On iPhone Safari, activate the WalletConnect / Reown fallback by replacing the placeholder REOWN_PROJECT_ID in index.html.";
+    }
+
+    function getWalletLoaderErrorMessage(error) {
+      const raw = String(error?.message || error || "").trim();
+      if (raw.includes("Failed to load https://unpkg.com/@walletconnect/ethereum-provider")) {
+        return "The WalletConnect / Reown browser bundle could not be loaded. Check access to the WalletConnect CDN or self-host the bundle before testing Safari again.";
+      }
+      if (raw.includes("did not expose EthereumProvider")) {
+        return "The WalletConnect bundle loaded, but it did not expose a usable Ethereum provider.";
+      }
+      return raw
+        ? `WalletConnect initialization failed: ${raw}`
+        : "WalletConnect initialization failed before the connection flow could start.";
+    }
+
+    function resetWalletConnectionState() {
+      state.walletSource = "none";
+      state.walletAddress = null;
+      state.walletProvider = null;
+      state.browserProvider = null;
+      state.signer = null;
+      state.writeContract = null;
+      state.bestOnChainScore = 0;
+      state.currentChainId = null;
+      elements.walletStatusValue.textContent = "Not connected";
+      elements.connectHeroButton.textContent = "Connect Wallet";
+      elements.connectSidebarButton.textContent = "Connect Wallet";
+      elements.connectHeroButton.disabled = false;
+      elements.connectSidebarButton.disabled = false;
+      updateScoreUI();
+      updateNetworkBadge();
+      updateSubmissionState();
+    }
+
+    function loadScriptOnce(src) {
+      return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[data-src="${src}"]`);
+        if (existing) {
+          if (existing.dataset.loaded === "true") {
+            resolve();
+            return;
+          }
+          existing.addEventListener("load", () => resolve(), { once: true });
+          existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), { once: true });
+          return;
+        }
+
+        const script = document.createElement("script");
+        script.src = src;
+        script.async = true;
+        script.dataset.src = src;
+        script.addEventListener("load", () => {
+          script.dataset.loaded = "true";
+          resolve();
+        }, { once: true });
+        script.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), { once: true });
+        document.head.appendChild(script);
+      });
+    }
+
+    function pickInjectedEthereumProvider() {
+      if (window.coinbaseWalletExtension && typeof window.coinbaseWalletExtension.request === "function") {
+        return window.coinbaseWalletExtension;
+      }
+
+      if (Array.isArray(window.ethereum?.providers)) {
+        const preferredInjectedProvider = window.ethereum.providers.find((provider) => (
+          provider &&
+          typeof provider.request === "function" &&
+          (provider.isCoinbaseWallet || provider.isBase || provider.isMetaMask)
+        ));
+
+        if (preferredInjectedProvider) {
+          return preferredInjectedProvider;
+        }
+      }
+
+      if (window.ethereum && typeof window.ethereum.request === "function") {
+        return window.ethereum;
+      }
+
+      return null;
+    }
+
+    async function detectMiniAppHost() {
+      if (!state.farcasterSdk) {
+        return null;
+      }
+
+      try {
+        if (typeof state.farcasterSdk.isInMiniApp === "function") {
+          const isHostedMiniApp = await withTimeout(state.farcasterSdk.isInMiniApp(), MINIAPP_HOST_TIMEOUT_MS, false);
+          return Boolean(isHostedMiniApp);
+        }
+      } catch (error) {
+        return false;
+      }
+
+      return Boolean(state.isMiniApp);
+    }
+
+    async function loadWalletConnectProvider() {
+      if (!hasConfiguredReownProjectId()) {
+        return null;
+      }
+
+      if (state.walletConnectProvider) {
+        return state.walletConnectProvider;
+      }
+
+      const scriptUrl = "https://unpkg.com/@walletconnect/ethereum-provider@2.17.3/dist/index.umd.js";
+      await loadScriptOnce(scriptUrl);
+
+      const EthereumProviderFactory =
+        window?.WalletConnectEthereumProvider?.EthereumProvider ||
+        window?.WalletConnectEthereumProvider ||
+        window?.EthereumProvider ||
+        null;
+
+      if (!EthereumProviderFactory || typeof EthereumProviderFactory.init !== "function") {
+        throw new Error("WalletConnect provider bundle did not expose EthereumProvider.");
+      }
+
+      const provider = await EthereumProviderFactory.init({
+        projectId: REOWN_PROJECT_ID,
+        chains: [CHAIN_CONFIG.chainIdDecimal],
+        optionalChains: [CHAIN_CONFIG.chainIdDecimal],
+        showQrModal: true,
+        methods: [
+          "eth_requestAccounts",
+          "eth_accounts",
+          "eth_chainId",
+          "wallet_switchEthereumChain",
+          "wallet_addEthereumChain",
+          "eth_sendTransaction",
+          "personal_sign"
+        ],
+        rpcMap: {
+          [CHAIN_CONFIG.chainIdDecimal]: CHAIN_CONFIG.rpcUrls[0]
+        }
+      });
+
+      state.walletConnectProvider = provider;
+      return provider;
+    }
+
+    async function getMiniAppEthereumProvider() {
+      const hasMiniAppHost = await detectMiniAppHost();
+      if (!hasMiniAppHost) {
+        return null;
+      }
+
+      try {
+        let provider = null;
+        if (state.farcasterSdk?.wallet?.getEthereumProvider) {
+          provider = await withTimeout(state.farcasterSdk.wallet.getEthereumProvider(), MINIAPP_WALLET_TIMEOUT_MS, null);
+        } else {
+          provider = await withTimeout(state.farcasterSdk?.wallet?.ethProvider || null, MINIAPP_WALLET_TIMEOUT_MS, null);
+        }
+
+        return provider && typeof provider.request === "function" ? provider : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    async function getActiveEthereumProvider() {
+      const miniAppProvider = await getMiniAppEthereumProvider();
+      if (isUsableEip1193Provider(miniAppProvider)) {
+        return { provider: miniAppProvider, source: "miniapp" };
+      }
+
+      const injectedProvider = pickInjectedEthereumProvider();
+      if (isUsableEip1193Provider(injectedProvider)) {
+        return { provider: injectedProvider, source: "injected" };
+      }
+
+      try {
+        const walletConnectProvider = await loadWalletConnectProvider();
+        if (isUsableEip1193Provider(walletConnectProvider)) {
+          return { provider: walletConnectProvider, source: "walletconnect" };
+        }
+      } catch (error) {
+        return { provider: null, source: "walletconnect_error", error };
+      }
+
+      return { provider: null, source: hasConfiguredReownProjectId() ? "none" : "walletconnect_unconfigured" };
+    }
+
+    async function waitForActiveEthereumProvider(maxAttempts = 6, delayMs = 350) {
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const result = await getActiveEthereumProvider();
+        if (result.provider || result.source === "walletconnect_unconfigured" || result.source === "walletconnect_error") {
+          return result;
+        }
+
+        if (attempt < maxAttempts - 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+        }
+      }
+
+      return { provider: null, source: hasConfiguredReownProjectId() ? "none" : "walletconnect_unconfigured" };
+    }
+
+    function buildBoardBackground() {
+      for (let index = 0; index < 16; index += 1) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.setAttribute("aria-hidden", "true");
+        elements.boardBackground.appendChild(cell);
+      }
+    }
+
+    function setTheme(themeName) {
+      document.documentElement.setAttribute("data-theme", themeName);
+      localStorage.setItem(STORAGE_KEYS.theme, themeName);
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+      setTheme(currentTheme === "dark" ? "light" : "dark");
+    }
+
+    function loadStoredTheme() {
+      const storedTheme = localStorage.getItem(STORAGE_KEYS.theme) || "dark";
+      setTheme(storedTheme);
+    }
+
+    function setStatus(kind, title, text) {
+      elements.statusTitle.textContent = title;
+      elements.statusText.textContent = text;
+      elements.statusDot.className = "dot";
+      if (kind === "success") {
+        elements.statusDot.classList.add("success");
+      } else if (kind === "danger") {
+        elements.statusDot.classList.add("danger");
+      }
+    }
+
+    function updateNetworkBadge() {
+      const hasWallet = Boolean(state.walletAddress);
+      const onBase = Number(state.currentChainId) === CHAIN_CONFIG.chainIdDecimal;
+      elements.networkDot.className = "dot";
+
+      if (!hasWallet) {
+        elements.networkBadgeText.textContent = "Read-only Mode";
+        elements.networkDot.classList.add("success");
+        elements.walletNetworkValue.textContent = "Read-only";
+        return;
+      }
+
+      if (onBase) {
+        elements.networkBadgeText.textContent = "Base Mainnet Ready";
+        elements.networkDot.classList.add("success");
+        elements.walletNetworkValue.textContent = "Base Mainnet";
+        return;
+      }
+
+      elements.networkBadgeText.textContent = "Wrong Network";
+      elements.networkDot.classList.add("danger");
+      elements.walletNetworkValue.textContent = `Chain ${state.currentChainId || "Unknown"}`;
+    }
+
+    function shortenAddress(address) {
+      if (!address || address === ZERO_ADDRESS) return "Not configured";
+      return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    }
+
+    function normalizeBaseNameTag(value) {
+      if (typeof value !== "string") return null;
+      const normalized = value.trim();
+      return normalized.toLowerCase().endsWith(".base.eth") ? normalized : null;
+    }
+
+    function getPreferredLeaderboardLabel(address, resolvedName) {
+      const normalizedName = normalizeBaseNameTag(resolvedName);
+      if (normalizedName) {
+        return normalizedName;
+      }
+      return shortenAddress(address);
+    }
+
+    async function fetchAddressTagFromApi(address) {
+      const response = await fetch(`${ADDRESS_TAG_API_PATH}?address=${encodeURIComponent(address)}`, {
+        headers: {
+          Accept: "application/json"
+        },
+        cache: "no-store"
+      });
+
+      if (!response.ok) {
+        throw new Error(`Address tag lookup failed with status ${response.status}`);
+      }
+
+      const payload = await response.json();
+      return normalizeBaseNameTag(payload?.nametag);
+    }
+
+    function getAppUrl() {
+      const isLocalhost = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost";
+      return isLocalhost ? `${window.location.origin}${window.location.pathname}` : APP_URL;
+    }
+
+    function getShareText() {
+      const score = state.score || 0;
+      if (state.hasEnded && score > 0) {
+        return `I just posted a ${score} score in Base2048Pulse on @base. Play the on-chain 2048 run and see if you can beat it.`;
+      }
+      if (score > 0) {
+        return `I am at ${score} points in Base2048Pulse on @base. Jump in and try to top this run.`;
+      }
+      return "I am playing Base2048Pulse on @base. Try the smooth on-chain 2048 experience and see how far you can go.";
+    }
+
+    function buildXShareUrl() {
+      const url = new URL("https://x.com/intent/tweet");
+      url.searchParams.set("text", getShareText());
+      url.searchParams.set("url", getAppUrl());
+      return url.toString();
+    }
+
+    function buildFarcasterIntentUrl() {
+      const url = new URL("https://warpcast.com/~/compose");
+      url.searchParams.set("text", getShareText());
+      url.searchParams.append("embeds[]", getAppUrl());
+      return url.toString();
+    }
+
+    function updateShareButtons() {
+      const canShare = state.score > 0;
+      elements.shareXButton.disabled = !canShare;
+      elements.shareFarcasterButton.disabled = !canShare;
+    }
+
+    function setGameStateMessage(htmlContent, isGameOver = false) {
+      elements.gameStateText.innerHTML = htmlContent;
+      elements.gameStateText.classList.toggle("is-hidden", isGameOver);
+    }
+
+    function syncGameOverOverlay() {
+      const isVisible = Boolean(state.hasEnded);
+      elements.gameOverOverlay.classList.toggle("is-visible", isVisible);
+      elements.gameOverOverlay.setAttribute("aria-hidden", String(!isVisible));
+    }
+
+    function updateLeaderboardTabs() {
+      elements.leaderboardTabs.forEach((button) => {
+        button.classList.toggle("active", button.dataset.range === state.leaderboardRange);
+      });
+      elements.leaderboardCaption.textContent = LEADERBOARD_CONFIG[state.leaderboardRange].reason;
+    }
+
+    function updateContractLabels() {
+      elements.savedContractValue.textContent = state.contractAddress;
+      const explorerHref = `${CHAIN_CONFIG.blockExplorerUrls[0]}/address/${state.contractAddress}`;
+      elements.contractExplorerLink.href = explorerHref;
+    }
+
+    async function copyContractAddress() {
+      try {
+        await navigator.clipboard.writeText(state.contractAddress);
+        setStatus("success", "Address Copied", "The contract address was copied to your clipboard.");
+      } catch (error) {
+        setStatus("danger", "Copy Failed", "Clipboard access was blocked by the browser.");
+      }
+    }
+
+    async function createReadProvider() {
+      for (const rpcUrl of CHAIN_CONFIG.rpcUrls) {
+        try {
+          const provider = new ethers.JsonRpcProvider(rpcUrl, CHAIN_CONFIG.chainIdDecimal);
+          await provider.getBlockNumber();
+          return provider;
+        } catch (error) {
+          continue;
+        }
+      }
+      throw new Error("Unable to reach any Base RPC endpoint.");
+    }
+
+    async function createEnsMainnetProvider() {
+      for (const rpcUrl of ENS_MAINNET_RPC_URLS) {
+        try {
+          const provider = new ethers.JsonRpcProvider(rpcUrl, 1);
+          await provider.getBlockNumber();
+          return provider;
+        } catch (error) {
+          continue;
+        }
+      }
+      throw new Error("Unable to reach any Ethereum mainnet RPC endpoint.");
+    }
+
+    async function initializeContracts() {
+      state.readProvider = await createReadProvider();
+      state.readContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.readProvider);
+
+      try {
+        state.ensMainnetProvider = await createEnsMainnetProvider();
+        state.ensRegistry = new ethers.Contract(ENS_MAINNET_REGISTRY_ADDRESS, ENS_REGISTRY_ABI, state.ensMainnetProvider);
+      } catch (error) {
+        state.ensMainnetProvider = null;
+        state.ensRegistry = null;
+      }
+
+      if (state.signer) {
+        state.writeContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.signer);
+      } else {
+        state.writeContract = null;
+      }
+
+      if (state.readContract) {
+        try {
+          const minimum = await state.readContract.minimumSubmitScore();
+          state.minimumSubmitScore = Number(minimum);
+        } catch (error) {
+          state.minimumSubmitScore = 0;
+        }
+      } else {
+        state.minimumSubmitScore = 0;
+      }
+
+      try {
+        await state.readContract.getSubmissionCount();
+        state.contractMode = "v2";
+      } catch (error) {
+        state.contractMode = "legacy";
+      }
+    }
+
+    function createSnapshot() {
+      return {
+        board: [...state.board],
+        score: state.score,
+        hasEnded: state.hasEnded,
+        hasWon: state.hasWon
+      };
+    }
+
+    function restoreSnapshot(snapshot) {
+      state.board = [...snapshot.board];
+      state.score = snapshot.score;
+      state.hasEnded = snapshot.hasEnded;
+      state.hasWon = snapshot.hasWon;
+      syncGameOverOverlay();
+    }
+
+    function randomEmptyIndex() {
+      const empties = [];
+      state.board.forEach((value, index) => {
+        if (value === 0) empties.push(index);
+      });
+      if (!empties.length) return -1;
+      return empties[Math.floor(Math.random() * empties.length)];
+    }
+
+    function addRandomTile() {
+      const index = randomEmptyIndex();
+      if (index === -1) return;
+      state.board[index] = Math.random() < 0.9 ? 2 : 4;
+    }
+
+    function resetGame() {
+      state.board = new Array(16).fill(0);
+      state.score = 0;
+      state.previousSnapshot = null;
+      state.hasEnded = false;
+      state.hasWon = false;
+      state.lastSubmittedScore = null;
+      addRandomTile();
+      addRandomTile();
+      renderBoard();
+      updateScoreUI();
+      updateSubmissionState();
+      setGameStateMessage("Build a path to 2048, then submit your final score on Base.");
+      syncGameOverOverlay();
+      setStatus("success", "Fresh Run", "The board is reset. Local play is instant and gas-free.");
+    }
+
+    function lineFromBoard(direction, lineIndex) {
+      if (direction === "left") {
+        return state.board.slice(lineIndex * 4, lineIndex * 4 + 4);
+      }
+      if (direction === "right") {
+        return state.board.slice(lineIndex * 4, lineIndex * 4 + 4).reverse();
+      }
+
+      const column = [];
+      for (let row = 0; row < 4; row += 1) {
+        const boardIndex = row * 4 + lineIndex;
+        column.push(state.board[boardIndex]);
+      }
+      return direction === "up" ? column : column.reverse();
+    }
+
+    function writeLineToBoard(direction, lineIndex, lineValues) {
+      if (direction === "left") {
+        for (let index = 0; index < 4; index += 1) {
+          state.board[lineIndex * 4 + index] = lineValues[index];
+        }
+        return;
+      }
+
+      if (direction === "right") {
+        const reversed = [...lineValues].reverse();
+        for (let index = 0; index < 4; index += 1) {
+          state.board[lineIndex * 4 + index] = reversed[index];
+        }
+        return;
+      }
+
+      const values = direction === "up" ? lineValues : [...lineValues].reverse();
+      for (let row = 0; row < 4; row += 1) {
+        state.board[row * 4 + lineIndex] = values[row];
+      }
+    }
+
+    function collapseLine(line) {
+      const filtered = line.filter(Boolean);
+      const output = [];
+      let gained = 0;
+
+      for (let index = 0; index < filtered.length; index += 1) {
+        const current = filtered[index];
+        const next = filtered[index + 1];
+        if (current === next) {
+          const merged = current * 2;
+          output.push(merged);
+          gained += merged;
+          if (merged >= 2048) {
+            state.hasWon = true;
+          }
+          index += 1;
+        } else {
+          output.push(current);
+        }
+      }
+
+      while (output.length < 4) {
+        output.push(0);
+      }
+
+      return { line: output, gained };
+    }
+
+    function boardsMatch(left, right) {
+      return left.every((value, index) => value === right[index]);
+    }
+
+    function attemptMove(direction) {
+      if (state.hasEnded) return false;
+
+      const beforeBoard = [...state.board];
+      const beforeScore = state.score;
+      const snapshot = createSnapshot();
+
+      for (let lineIndex = 0; lineIndex < 4; lineIndex += 1) {
+        const next = collapseLine(lineFromBoard(direction, lineIndex));
+        state.score += next.gained;
+        writeLineToBoard(direction, lineIndex, next.line);
+      }
+
+      if (boardsMatch(beforeBoard, state.board)) {
+        state.score = beforeScore;
+        return false;
+      }
+
+      state.previousSnapshot = snapshot;
+      addRandomTile();
+      state.bestLocalScore = Math.max(state.bestLocalScore, state.score);
+      localStorage.setItem(STORAGE_KEYS.bestLocal, String(state.bestLocalScore));
+      checkGameEnd();
+      renderBoard();
+      updateScoreUI();
+      updateSubmissionState();
+      return true;
+    }
+
+    function checkGameEnd() {
+      if (state.board.includes(0)) {
+        state.hasEnded = false;
+        setGameStateMessage(
+          state.hasWon
+            ? "2048 reached. You can keep pushing for a higher final score."
+            : "Keep the chain alive and look for the next merge."
+        );
+        syncGameOverOverlay();
+        return;
+      }
+
+      for (let row = 0; row < 4; row += 1) {
+        for (let col = 0; col < 4; col += 1) {
+          const value = state.board[row * 4 + col];
+          if (col < 3 && value === state.board[row * 4 + col + 1]) {
+            state.hasEnded = false;
+            syncGameOverOverlay();
+            return;
+          }
+          if (row < 3 && value === state.board[(row + 1) * 4 + col]) {
+            state.hasEnded = false;
+            syncGameOverOverlay();
+            return;
+          }
+        }
+      }
+
+      state.hasEnded = true;
+      setGameStateMessage(
+        '<span class="game-over-text">Game Over</span> Connect a wallet and submit if this run beats your on-chain best.',
+        true
+      );
+      syncGameOverOverlay();
+    }
+
+    function tileFontClass(value) {
+      const digits = String(value).length;
+      if (digits <= 2) return "size-small";
+      if (digits === 3) return "size-medium";
+      return "size-large";
+    }
+
+    function renderBoard() {
+      elements.tileLayer.innerHTML = "";
+
+      state.board.forEach((value, index) => {
+        if (!value) return;
+        const row = Math.floor(index / 4);
+        const col = index % 4;
+        const tile = document.createElement("div");
+        tile.className = `tile ${tileFontClass(value)}`;
+        tile.dataset.value = String(value);
+        if (value > 2048) {
+          tile.dataset.super = "true";
+        }
+        tile.textContent = String(value);
+        tile.style.left = `calc(${col} * (var(--cell-size) + var(--board-gap)))`;
+        tile.style.top = `calc(${row} * (var(--cell-size) + var(--board-gap)))`;
+        elements.tileLayer.appendChild(tile);
+      });
+
+      syncGameOverOverlay();
+    }
+
+    function updateScoreUI() {
+      elements.scoreValue.textContent = String(state.score);
+      elements.bestLocalValue.textContent = String(state.bestLocalScore);
+      elements.bestOnChainValue.textContent = String(state.bestOnChainScore);
+      elements.undoButton.disabled = !state.previousSnapshot;
+      updateShareButtons();
+    }
+
+    function canSubmitScore() {
+      if (!state.writeContract || !state.walletAddress) return false;
+      if (Number(state.currentChainId) !== CHAIN_CONFIG.chainIdDecimal) return false;
+      if (state.contractMode === "v2") return true;
+      if (!state.hasEnded) return false;
+      if (state.score <= 0) return false;
+      if (state.score < state.minimumSubmitScore) return false;
+      if (state.score <= state.bestOnChainScore) return false;
+      if (state.lastSubmittedScore === state.score) return false;
+      return true;
+    }
+
+    function updateSubmissionState() {
+      const reasons = [];
+      if (!state.walletAddress) {
+        reasons.push("Connect a wallet when you are ready to submit an on-chain score.");
+      } else if (Number(state.currentChainId) !== CHAIN_CONFIG.chainIdDecimal) {
+        reasons.push("Switch your wallet to Base Mainnet before submitting.");
+      } else if (state.contractMode === "v2") {
+        reasons.push("This contract accepts score submissions at any stage of the run.");
+      } else if (!state.hasEnded) {
+        reasons.push("Submission is enabled only after the game reaches a final state.");
+      } else if (state.score < state.minimumSubmitScore) {
+        reasons.push(`This contract only accepts scores from ${state.minimumSubmitScore} and above.`);
+      } else if (state.score <= state.bestOnChainScore) {
+        reasons.push("Only a score that improves your stored on-chain best can be submitted.");
+      } else if (state.lastSubmittedScore === state.score) {
+        reasons.push("This exact score was already submitted in the current session.");
+      } else {
+        reasons.push("This run is ready for on-chain submission.");
+      }
+
+      const ready = canSubmitScore();
+      elements.submitButton.disabled = !ready || state.txState === "pending" || state.txState === "awaiting_signature";
+      elements.overlaySubmitButton.disabled = elements.submitButton.disabled;
+      elements.submitHint.textContent = reasons[0];
+      elements.submitButton.textContent = state.txState === "awaiting_signature"
+        ? "Awaiting Signature"
+        : state.txState === "pending"
+          ? "Submitting..."
+          : "Submit Score";
+      elements.overlaySubmitButton.textContent = elements.submitButton.textContent;
+    }
+
+    function formatTimestamp(value) {
+      if (!value) return "Unknown time";
+      const date = new Date(Number(value) * 1000);
+      return date.toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function renderLeaderboard(entries, reasonText) {
+      elements.leaderboardList.innerHTML = "";
+      elements.leaderboardCaption.textContent = reasonText;
+
+      if (!entries.length) {
+        const item = document.createElement("li");
+        item.className = "leaderboard-item";
+        item.innerHTML = `
+          <div class="leaderboard-rank">#</div>
+          <div>
+            <div class="leaderboard-player">No scores yet</div>
+            <div class="leaderboard-time">${reasonText}</div>
+          </div>
+          <div class="leaderboard-score">0</div>
+        `;
+        elements.leaderboardList.appendChild(item);
+        return;
+      }
+
+      entries.forEach((entry, index) => {
+        const item = document.createElement("li");
+        item.className = "leaderboard-item";
+        const playerLabel = getPreferredLeaderboardLabel(
+          entry.player,
+          state.basenameCache.get(entry.player.toLowerCase()) || null
+        );
+        item.innerHTML = `
+          <div class="leaderboard-rank">${index + 1}</div>
+          <div>
+            <div class="leaderboard-player" data-player-address="${entry.player.toLowerCase()}">${playerLabel}</div>
+            <div class="leaderboard-time">${formatTimestamp(entry.updatedAt)}</div>
+          </div>
+          <div class="leaderboard-score">${entry.score}</div>
+        `;
+        elements.leaderboardList.appendChild(item);
+
+        const playerNode = item.querySelector(".leaderboard-player");
+        resolveLeaderboardName(entry.player).then((resolvedLabel) => {
+          if (!playerNode || !playerNode.isConnected) return;
+          if (playerNode.dataset.playerAddress !== entry.player.toLowerCase()) return;
+          playerNode.textContent = resolvedLabel;
+        });
+      });
+    }
+
+    async function resolveLeaderboardName(address) {
+      const cacheKey = address.toLowerCase();
+      if (state.basenameCache.has(cacheKey)) {
+        return state.basenameCache.get(cacheKey);
+      }
+      if (state.basenamePending.has(cacheKey)) {
+        return state.basenamePending.get(cacheKey);
+      }
+
+      const pendingLookup = (async () => {
+        let preferred = shortenAddress(address);
+
+        try {
+          const apiNametag = await fetchAddressTagFromApi(address);
+          if (apiNametag) {
+            preferred = apiNametag;
+          } else if (state.ensRegistry && state.ensMainnetProvider) {
+            const reverseName = `${address.toLowerCase().slice(2)}.${BASE_ENSIP19_REVERSE_NAMESPACE}`;
+            const reverseNode = ethers.namehash(reverseName);
+            const resolverAddress = await state.ensRegistry.resolver(reverseNode);
+
+            if (resolverAddress && resolverAddress !== ZERO_ADDRESS) {
+              const resolver = new ethers.Contract(resolverAddress, ENS_NAME_RESOLVER_ABI, state.ensMainnetProvider);
+              const resolvedName = await resolver.name(reverseNode);
+              preferred = getPreferredLeaderboardLabel(address, resolvedName);
+            }
+          }
+        } catch (error) {
+          if (state.ensRegistry && state.ensMainnetProvider) {
+            try {
+              const reverseName = `${address.toLowerCase().slice(2)}.${BASE_ENSIP19_REVERSE_NAMESPACE}`;
+              const reverseNode = ethers.namehash(reverseName);
+              const resolverAddress = await state.ensRegistry.resolver(reverseNode);
+
+              if (resolverAddress && resolverAddress !== ZERO_ADDRESS) {
+                const resolver = new ethers.Contract(resolverAddress, ENS_NAME_RESOLVER_ABI, state.ensMainnetProvider);
+                const resolvedName = await resolver.name(reverseNode);
+                preferred = getPreferredLeaderboardLabel(address, resolvedName);
+              }
+            } catch (fallbackError) {
+              preferred = shortenAddress(address);
+            }
+          } else {
+            preferred = shortenAddress(address);
+          }
+        }
+
+        state.basenameCache.set(cacheKey, preferred);
+        state.basenamePending.delete(cacheKey);
+        return preferred;
+      })();
+
+      state.basenamePending.set(cacheKey, pendingLookup);
+      return pendingLookup;
+    }
+
+    async function fetchScoreEventEntries(fromBlock, toBlock) {
+      const parsedEntries = [];
+      const chunkSize = 8000;
+
+      for (let startBlock = fromBlock; startBlock <= toBlock; startBlock += chunkSize) {
+        const endBlock = Math.min(startBlock + chunkSize - 1, toBlock);
+        try {
+          const logs = await state.readProvider.getLogs({
+            address: state.contractAddress,
+            topics: [SCORE_SUBMITTED_TOPIC],
+            fromBlock: startBlock,
+            toBlock: endBlock
+          });
+
+          logs.forEach((log) => {
+            const parsed = CONTRACT_INTERFACE.parseLog(log);
+            parsedEntries.push({
+              player: parsed.args.player,
+              score: Number(parsed.args.score),
+              updatedAt: Number(parsed.args.timestamp)
+            });
+          });
+        } catch (error) {
+          continue;
+        }
+      }
+
+      return parsedEntries;
+    }
+
+    async function loadAllSubmissions(force = false) {
+      if (!force && state.allSubmissionsCache) {
+        return state.allSubmissionsCache;
+      }
+
+      if (state.contractMode !== "v2") {
+        return [];
+      }
+
+      const submissionCount = Number(await state.readContract.getSubmissionCount());
+      const pageSize = 200;
+      const submissions = [];
+
+      for (let start = 0; start < submissionCount; start += pageSize) {
+        const page = await state.readContract.getSubmissions(start, pageSize);
+        page.forEach((entry) => {
+          submissions.push({
+            submissionId: Number(entry.submissionId),
+            player: entry.player,
+            score: Number(entry.score),
+            updatedAt: Number(entry.timestamp)
+          });
+        });
+      }
+
+      state.allSubmissionsCache = submissions;
+      return submissions;
+    }
+
+    async function buildWindowedLeaderboard(rangeKey) {
+      const config = LEADERBOARD_CONFIG[rangeKey];
+      if (state.contractMode === "v2") {
+        const submissions = await loadAllSubmissions(false);
+        const cutoff = Math.floor(Date.now() / 1000) - config.seconds;
+        return submissions
+          .filter((entry) => entry.updatedAt >= cutoff)
+          .sort((left, right) => right.score - left.score || right.updatedAt - left.updatedAt)
+          .slice(0, 25);
+      }
+
+      const latestBlock = await state.readProvider.getBlockNumber();
+      const fromBlock = Math.max(0, latestBlock - config.lookbackBlocks);
+      const entries = await fetchScoreEventEntries(fromBlock, latestBlock);
+      const cutoff = Math.floor(Date.now() / 1000) - config.seconds;
+      return entries
+        .filter((entry) => entry.updatedAt >= cutoff)
+        .sort((left, right) => right.score - left.score || right.updatedAt - left.updatedAt)
+        .slice(0, 25);
+    }
+
+    async function loadLeaderboardRange(rangeKey, force = false) {
+      if (!force && state.leaderboards[rangeKey]) {
+        return state.leaderboards[rangeKey];
+      }
+
+      let entries = [];
+
+      if (rangeKey === "all" && state.contractMode === "legacy") {
+        const topEntries = await state.readContract.getTopEntries();
+        entries = topEntries.map((entry) => ({
+          player: entry.player,
+          score: Number(entry.score),
+          updatedAt: Number(entry.updatedAt)
+        }));
+      } else {
+        if (rangeKey === "all" && state.contractMode === "v2") {
+          const submissions = await loadAllSubmissions(force);
+          entries = submissions
+            .slice()
+            .sort((left, right) => right.score - left.score || right.updatedAt - left.updatedAt)
+            .slice(0, 25);
+        } else {
+          entries = await buildWindowedLeaderboard(rangeKey);
+        }
+      }
+
+      state.leaderboards[rangeKey] = entries;
+      return entries;
+    }
+
+    async function setLeaderboardRange(rangeKey, force = false) {
+      state.leaderboardRange = rangeKey;
+      updateLeaderboardTabs();
+
+      if (!state.readContract) {
+        try {
+          await initializeContracts();
+        } catch (error) {
+          renderLeaderboard([], "Base RPC is not reachable right now.");
+          setStatus("danger", "RPC Unavailable", "The app could not reach a Base RPC endpoint to load the leaderboard.");
+          return;
+        }
+      }
+
+      elements.refreshLeaderboardButton.disabled = true;
+      elements.leaderboardTabs.forEach((button) => {
+        button.disabled = true;
+      });
+
+      try {
+        const entries = await loadLeaderboardRange(rangeKey, force);
+        renderLeaderboard(entries, entries.length ? LEADERBOARD_CONFIG[rangeKey].reason : `${LEADERBOARD_CONFIG[rangeKey].reason} No scores are available in this time window yet.`);
+      } catch (error) {
+        renderLeaderboard([], `The ${LEADERBOARD_CONFIG[rangeKey].label.toLowerCase()} leaderboard could not be loaded right now.`);
+        setStatus("danger", "Leaderboard Error", "The locked contract did not return the expected leaderboard data for this time range.");
+      } finally {
+        elements.refreshLeaderboardButton.disabled = false;
+        elements.leaderboardTabs.forEach((button) => {
+          button.disabled = false;
+        });
+      }
+    }
+
+    async function refreshLeaderboard(force = true) {
+      if (force) {
+        state.leaderboards = { all: null, weekly: null, daily: null };
+        state.allSubmissionsCache = null;
+      }
+      return setLeaderboardRange(state.leaderboardRange, force);
+    }
+
+    async function getLatestSubmissionRankForPlayer(playerAddress, scoreValue) {
+      if (state.contractMode !== "v2") {
+        const entries = await loadLeaderboardRange("all", false);
+        const rankIndex = entries.findIndex((entry) => entry.player.toLowerCase() === playerAddress.toLowerCase());
+        return rankIndex === -1 ? "Outside Top 10" : `#${rankIndex + 1}`;
+      }
+
+      const playerSubmissionIds = await state.readContract.getPlayerSubmissionIds(playerAddress);
+      if (!playerSubmissionIds.length) {
+        return "Unavailable";
+      }
+
+      const latestSubmissionId = Number(playerSubmissionIds[playerSubmissionIds.length - 1]);
+      const submissions = await loadAllSubmissions(false);
+      const sorted = submissions
+        .slice()
+        .sort((left, right) => right.score - left.score || right.updatedAt - left.updatedAt || left.submissionId - right.submissionId);
+
+      const rankIndex = sorted.findIndex((entry) => entry.submissionId === latestSubmissionId);
+      if (rankIndex === -1) {
+        const fallbackIndex = sorted.findIndex((entry) => entry.player.toLowerCase() === playerAddress.toLowerCase() && entry.score === scoreValue);
+        return fallbackIndex === -1 ? "Unavailable" : `#${fallbackIndex + 1}`;
+      }
+      return `#${rankIndex + 1}`;
+    }
+
+    async function refreshPlayerBest() {
+      if (!state.walletAddress || !state.readContract) {
+        state.bestOnChainScore = 0;
+        updateScoreUI();
+        updateSubmissionState();
+        return;
+      }
+
+      try {
+        const best = await state.readContract.getPlayerBestScore(state.walletAddress);
+        state.bestOnChainScore = Number(best);
+      } catch (error) {
+        state.bestOnChainScore = 0;
+      }
+
+      updateScoreUI();
+      updateSubmissionState();
+    }
+
+    async function ensureBaseNetwork(provider) {
+      const chainIdHex = await provider.request({ method: "eth_chainId" });
+      state.currentChainId = Number.parseInt(chainIdHex, 16);
+      updateNetworkBadge();
+
+      if (state.currentChainId === CHAIN_CONFIG.chainIdDecimal) {
+        return true;
+      }
+
+      try {
+        await provider.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: CHAIN_CONFIG.chainIdHex }]
+        });
+      } catch (error) {
+        if (error && Number(error.code) === 4902) {
+          await provider.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: CHAIN_CONFIG.chainIdHex,
+              chainName: CHAIN_CONFIG.chainName,
+              nativeCurrency: CHAIN_CONFIG.nativeCurrency,
+              rpcUrls: CHAIN_CONFIG.rpcUrls,
+              blockExplorerUrls: CHAIN_CONFIG.blockExplorerUrls
+            }]
+          });
+        } else {
+          throw error;
+        }
+      }
+
+      const updatedChainIdHex = await provider.request({ method: "eth_chainId" });
+      state.currentChainId = Number.parseInt(updatedChainIdHex, 16);
+      updateNetworkBadge();
+      return state.currentChainId === CHAIN_CONFIG.chainIdDecimal;
+    }
+
+    async function connectWallet() {
+      const { provider, source, error: providerError } = await waitForActiveEthereumProvider();
+      const hostedMiniApp = await detectMiniAppHost();
+
+      if (!provider) {
+        const missingMessage = source === "walletconnect_error"
+          ? getWalletLoaderErrorMessage(providerError)
+          : getWalletMissingMessage(source, hostedMiniApp);
+        setStatus("danger", "Wallet Missing", missingMessage);
+        return;
+      }
+
+      try {
+        state.walletSource = source;
+        setStatus("success", "Connecting", "Approve the wallet connection request to continue.");
+        let accounts = [];
+        try {
+          accounts = await provider.request({ method: "eth_accounts" });
+        } catch (error) {
+          accounts = [];
+        }
+
+        if (!Array.isArray(accounts) || !accounts.length) {
+          accounts = await provider.request({ method: "eth_requestAccounts" });
+        }
+
+        if (!Array.isArray(accounts) || !accounts.length) {
+          throw new Error("No wallet account is available.");
+        }
+
+        state.walletProvider = provider;
+        state.browserProvider = new ethers.BrowserProvider(provider);
+        state.signer = await state.browserProvider.getSigner();
+        const address = await state.signer.getAddress();
+        state.walletAddress = ethers.getAddress(address);
+
+        const ready = await ensureBaseNetwork(provider);
+        if (!ready) {
+          throw new Error("Base Mainnet is required.");
+        }
+
+        state.writeContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.signer);
+        attachWalletListeners(provider);
+
+        elements.walletStatusValue.textContent = shortenAddress(state.walletAddress);
+        elements.connectHeroButton.textContent = "Wallet Connected";
+        elements.connectSidebarButton.textContent = "Wallet Connected";
+        elements.connectHeroButton.disabled = true;
+        elements.connectSidebarButton.disabled = true;
+
+        updateNetworkBadge();
+        await refreshPlayerBest();
+        setStatus(
+          "success",
+          "Wallet Connected",
+          `The wallet is connected on Base Mainnet via ${getProviderSourceLabel(state.walletSource)} and is ready for score submission.`
+        );
+      } catch (error) {
+        if (source === "walletconnect") {
+          await disconnectWalletConnectSession();
+        }
+        resetWalletConnectionState();
+        const message = getReadableError(error);
+        setStatus("danger", source === "walletconnect" ? "WalletConnect Failed" : "Wallet Connection Failed", message);
+      }
+    }
+
+    function getReadableError(error) {
+      const raw = String(
+        error?.shortMessage ||
+        error?.reason ||
+        error?.message ||
+        "Unknown error."
+      );
+
+      if (raw.includes("user rejected") || raw.includes("User denied")) {
+        return "The wallet request was rejected. Local play is still available.";
+      }
+      if (raw.includes("No wallet account is available")) {
+        return "The wallet connection completed without exposing an account. Try opening the request again from your wallet app.";
+      }
+      if (raw.includes("Connection request reset")) {
+        return "The wallet connection request was cancelled before an account was selected.";
+      }
+      if (raw.includes("Disconnected")) {
+        return "The wallet session ended before the connection completed.";
+      }
+      if (raw.includes("ScoreNotImproved")) {
+        return "This score does not improve your saved on-chain best.";
+      }
+      if (raw.includes("ScoreTooLow")) {
+        return `This contract only accepts scores from ${state.minimumSubmitScore} and above.`;
+      }
+      if (raw.includes("GamePaused")) {
+        return "The score contract is paused right now.";
+      }
+      if (raw.includes("Base Mainnet")) {
+        return "Switch the wallet to Base Mainnet to continue.";
+      }
+
+      return raw;
+    }
+
+    async function submitScore() {
+      if (!canSubmitScore()) {
+        updateSubmissionState();
+        setStatus("danger", "Submission Blocked", elements.submitHint.textContent);
+        return;
+      }
+
+      try {
+        state.txState = "awaiting_signature";
+        updateSubmissionState();
+        setStatus("success", "Awaiting Signature", "Confirm the submit transaction in your wallet.");
+
+        const tx = await state.writeContract.submitScore(BigInt(state.score));
+        state.txState = "pending";
+        updateSubmissionState();
+        setStatus("success", "Transaction Pending", "Waiting for Base Mainnet confirmation.");
+
+        await tx.wait();
+
+        state.txState = "idle";
+        state.lastSubmittedScore = state.score;
+        state.bestOnChainScore = Math.max(state.bestOnChainScore, state.score);
+        state.leaderboards = { all: null, weekly: null, daily: null };
+        state.allSubmissionsCache = null;
+        updateScoreUI();
+        updateSubmissionState();
+        await refreshLeaderboard();
+        const rankLabel = await getLatestSubmissionRankForPlayer(state.walletAddress, state.score);
+        setStatus("success", "Score Submitted", `Score ${state.score} confirmed on Base Mainnet. All-time rank: ${rankLabel}.`);
+      } catch (error) {
+        state.txState = "idle";
+        updateSubmissionState();
+        setStatus("danger", "Transaction Failed", getReadableError(error));
+      }
+    }
+
+    function undoMove() {
+      if (!state.previousSnapshot) return;
+      restoreSnapshot(state.previousSnapshot);
+      state.previousSnapshot = null;
+      renderBoard();
+      updateScoreUI();
+      updateSubmissionState();
+      setGameStateMessage("Last move restored. You can try a different path.");
+      syncGameOverOverlay();
+      setStatus("success", "Undo Applied", "The previous board state was restored locally.");
+    }
+
+    function handleKeyboardMove(event) {
+      if (event.target instanceof HTMLInputElement) return;
+
+      const key = event.key.toLowerCase();
+      const map = {
+        arrowup: "up",
+        w: "up",
+        arrowdown: "down",
+        s: "down",
+        arrowleft: "left",
+        a: "left",
+        arrowright: "right",
+        d: "right"
+      };
+
+      const direction = map[key];
+      if (!direction) return;
+
+      event.preventDefault();
+      if (attemptMove(direction)) {
+        setStatus("success", "Move Registered", "Gameplay is local until you decide to submit a final score.");
+      }
+    }
+
+    function onPointerDown(event) {
+      state.pointerActive = true;
+      state.pointerStartX = event.clientX;
+      state.pointerStartY = event.clientY;
+    }
+
+    function onPointerUp(event) {
+      if (!state.pointerActive) return;
+      state.pointerActive = false;
+
+      const diffX = event.clientX - state.pointerStartX;
+      const diffY = event.clientY - state.pointerStartY;
+      const absX = Math.abs(diffX);
+      const absY = Math.abs(diffY);
+      const threshold = 26;
+
+      if (Math.max(absX, absY) < threshold) return;
+
+      const direction = absX > absY
+        ? (diffX > 0 ? "right" : "left")
+        : (diffY > 0 ? "down" : "up");
+
+      if (attemptMove(direction)) {
+        setStatus("success", "Swipe Registered", "Touch input is active and ready for the next move.");
+      }
+    }
+
+    function onPointerCancel() {
+      state.pointerActive = false;
+    }
+
+    function openHelp() {
+      elements.helpModal.classList.add("is-open");
+      elements.helpModal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeHelp() {
+      elements.helpModal.classList.remove("is-open");
+      elements.helpModal.setAttribute("aria-hidden", "true");
+    }
+
+    function shareOnX() {
+      window.open(buildXShareUrl(), "_blank", "noopener,noreferrer");
+    }
+
+    async function shareOnFarcaster() {
+      const shareUrl = getAppUrl();
+      const shareText = getShareText();
+      const fallbackUrl = buildFarcasterIntentUrl();
+
+      try {
+        if (state.isMiniApp && state.farcasterSdk?.actions?.composeCast) {
+          await state.farcasterSdk.actions.composeCast({
+            text: shareText,
+            embeds: [shareUrl]
+          });
+          setStatus("success", "Opened Farcaster Share", "The native Farcaster cast composer is ready.");
+          return;
+        }
+      } catch (error) {
+        // Fallback to Warpcast intent below.
+      }
+
+      const popup = window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+      if (!popup || popup.closed || typeof popup.closed === "undefined") {
+        window.location.href = fallbackUrl;
+      } else {
+        setStatus("success", "Opened Farcaster Share", "Warpcast composer opened in a new tab.");
+      }
+    }
+
+    async function initializeMiniApp() {
+      try {
+        const { sdk } = await import("https://esm.sh/@farcaster/miniapp-sdk");
+        state.farcasterSdk = sdk;
+        await withTimeout(sdk.actions.ready({ disableNativeGestures: true }), MINIAPP_HOST_TIMEOUT_MS, null);
+        state.isMiniApp = await detectMiniAppHost();
+        attachWalletListeners(pickInjectedEthereumProvider());
+      } catch (error) {
+        state.isMiniApp = false;
+      }
+    }
+
+    async function disconnectWalletConnectSession() {
+      if (!state.walletConnectProvider || typeof state.walletConnectProvider.disconnect !== "function") {
+        return;
+      }
+
+      try {
+        await state.walletConnectProvider.disconnect();
+      } catch (error) {
+        // Ignore disconnect cleanup errors.
+      } finally {
+        state.walletConnectProvider = null;
+      }
+    }
+
+    function detachWalletListeners() {
+      const provider = state.walletListenerProvider;
+      if (!provider || typeof provider.removeListener !== "function") return;
+
+      if (state.walletAccountsChangedHandler) {
+        provider.removeListener("accountsChanged", state.walletAccountsChangedHandler);
+      }
+      if (state.walletChainChangedHandler) {
+        provider.removeListener("chainChanged", state.walletChainChangedHandler);
+      }
+
+      state.walletListenerProvider = null;
+      state.walletAccountsChangedHandler = null;
+      state.walletChainChangedHandler = null;
+    }
+
+    function attachWalletListeners(provider = pickInjectedEthereumProvider()) {
+      if (!provider || typeof provider.on !== "function") return;
+      if (state.walletListenerProvider === provider) return;
+
+      detachWalletListeners();
+
+      state.walletAccountsChangedHandler = async (accounts) => {
+        if (!accounts.length) {
+          if (state.walletSource === "walletconnect") {
+            await disconnectWalletConnectSession();
+          }
+          resetWalletConnectionState();
+          setStatus("danger", "Wallet Disconnected", "The wallet session ended. Local play remains active.");
+          return;
+        }
+
+        state.walletAddress = ethers.getAddress(accounts[0]);
+        elements.walletStatusValue.textContent = shortenAddress(state.walletAddress);
+        if (state.browserProvider) {
+          state.signer = await state.browserProvider.getSigner();
+          state.writeContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.signer);
+        }
+        await refreshPlayerBest();
+        updateNetworkBadge();
+      };
+
+      state.walletChainChangedHandler = async (chainIdHex) => {
+        state.currentChainId = Number.parseInt(chainIdHex, 16);
+        updateNetworkBadge();
+        updateSubmissionState();
+        if (state.walletAddress) {
+          await refreshPlayerBest();
+        }
+      };
+
+      provider.on("accountsChanged", state.walletAccountsChangedHandler);
+      provider.on("chainChanged", state.walletChainChangedHandler);
+      state.walletListenerProvider = provider;
+    }
+
+    function attachEvents() {
+      elements.connectHeroButton.addEventListener("click", connectWallet);
+      elements.connectSidebarButton.addEventListener("click", connectWallet);
+      elements.refreshLeaderboardButton.addEventListener("click", () => refreshLeaderboard(true));
+      elements.copyContractButton.addEventListener("click", copyContractAddress);
+      elements.newGameButton.addEventListener("click", resetGame);
+      elements.overlaySubmitButton.addEventListener("click", submitScore);
+      elements.overlayTryAgainButton.addEventListener("click", resetGame);
+      elements.undoButton.addEventListener("click", undoMove);
+      elements.submitButton.addEventListener("click", submitScore);
+      elements.shareXButton.addEventListener("click", shareOnX);
+      elements.shareFarcasterButton.addEventListener("click", shareOnFarcaster);
+      elements.openHelpButton.addEventListener("click", openHelp);
+      elements.closeHelpButton.addEventListener("click", closeHelp);
+      elements.leaderboardTabs.forEach((button) => {
+        button.addEventListener("click", () => {
+          setLeaderboardRange(button.dataset.range, false);
+        });
+      });
+      elements.helpModal.addEventListener("click", (event) => {
+        if (event.target === elements.helpModal) closeHelp();
+      });
+      elements.themeToggleButton.addEventListener("click", toggleTheme);
+
+      window.addEventListener("keydown", handleKeyboardMove);
+      elements.boardFrame.addEventListener("pointerdown", onPointerDown);
+      elements.boardFrame.addEventListener("pointerup", onPointerUp);
+      elements.boardFrame.addEventListener("pointercancel", onPointerCancel);
+      elements.boardFrame.addEventListener("pointerleave", onPointerCancel);
+      attachWalletListeners();
+    }
+
+    async function initializeApp() {
+      cacheElements();
+      buildBoardBackground();
+      loadStoredTheme();
+      updateContractLabels();
+      updateNetworkBadge();
+      updateScoreUI();
+      updateLeaderboardTabs();
+      attachEvents();
+
+      try {
+        await initializeContracts();
+        await refreshLeaderboard();
+      } catch (error) {
+        setStatus("danger", "RPC Initialization Failed", "The game is playable, but the leaderboard could not connect to Base RPC yet.");
+      }
+
+      resetGame();
+      await initializeMiniApp();
+    }
+
+    window.addEventListener("load", initializeApp);
+  </script>
+</body>
+</html>
