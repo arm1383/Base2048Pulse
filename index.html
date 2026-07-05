@@ -1204,7 +1204,7 @@
 
   <script>
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-    const DEFAULT_CONTRACT_ADDRESS = "0x2A726E28240F356Dbe80c02A6f5Dfd137C00D30D";
+    const DEFAULT_CONTRACT_ADDRESS = "0xaf73175B8E033B26b334B07823eabb2cbF15E2c7";
     const STORAGE_KEYS = {
       theme: "base2048-theme",
       bestLocal: "base2048-best-local"
@@ -1229,6 +1229,10 @@
       "function getEntryCount() view returns (uint256)",
       "function getTopEntries() view returns ((address player,uint256 score,uint256 updatedAt)[])",
       "function getPlayerBestScore(address player) view returns (uint256)",
+      "function getSubmissionCount() view returns (uint256)",
+      "function getSubmission(uint256 index) view returns ((uint256 submissionId,address player,uint256 score,uint256 timestamp))",
+      "function getSubmissions(uint256 start,uint256 limit) view returns ((uint256 submissionId,address player,uint256 score,uint256 timestamp)[])",
+      "function getPlayerSubmissionIds(address player) view returns (uint256[])",
       "function submitScore(uint256 score)",
       "event ScoreSubmitted(address indexed player, uint256 score, uint256 previousBest, uint256 timestamp)"
     ];
@@ -1284,7 +1288,9 @@
         daily: null
       },
       farcasterSdk: null,
-      isMiniApp: false
+      isMiniApp: false,
+      contractMode: "legacy",
+      allSubmissionsCache: null
     };
 
     const elements = {};
@@ -1489,6 +1495,13 @@
         }
       } else {
         state.minimumSubmitScore = 0;
+      }
+
+      try {
+        await state.readContract.getSubmissionCount();
+        state.contractMode = "v2";
+      } catch (error) {
+        state.contractMode = "legacy";
       }
     }
 
@@ -1708,6 +1721,7 @@
     function canSubmitScore() {
       if (!state.writeContract || !state.walletAddress) return false;
       if (Number(state.currentChainId) !== CHAIN_CONFIG.chainIdDecimal) return false;
+      if (state.contractMode === "v2") return true;
       if (!state.hasEnded) return false;
       if (state.score <= 0) return false;
       if (state.score < state.minimumSubmitScore) return false;
@@ -1722,6 +1736,8 @@
         reasons.push("Connect a wallet when you are ready to submit an on-chain score.");
       } else if (Number(state.currentChainId) !== CHAIN_CONFIG.chainIdDecimal) {
         reasons.push("Switch your wallet to Base Mainnet before submitting.");
+      } else if (state.contractMode === "v2") {
+        reasons.push("This contract accepts score submissions at any stage of the run.");
       } else if (!state.hasEnded) {
         reasons.push("Submission is enabled only after the game reaches a final state.");
       } else if (state.score < state.minimumSubmitScore) {
@@ -1792,49 +1808,82 @@
 
     async function fetchScoreEventEntries(fromBlock, toBlock) {
       const parsedEntries = [];
-      const chunkSize = 50000;
+      const chunkSize = 8000;
 
       for (let startBlock = fromBlock; startBlock <= toBlock; startBlock += chunkSize) {
         const endBlock = Math.min(startBlock + chunkSize - 1, toBlock);
-        const logs = await state.readProvider.getLogs({
-          address: state.contractAddress,
-          topics: [SCORE_SUBMITTED_TOPIC],
-          fromBlock: startBlock,
-          toBlock: endBlock
-        });
-
-        logs.forEach((log) => {
-          const parsed = CONTRACT_INTERFACE.parseLog(log);
-          parsedEntries.push({
-            player: parsed.args.player,
-            score: Number(parsed.args.score),
-            updatedAt: Number(parsed.args.timestamp)
+        try {
+          const logs = await state.readProvider.getLogs({
+            address: state.contractAddress,
+            topics: [SCORE_SUBMITTED_TOPIC],
+            fromBlock: startBlock,
+            toBlock: endBlock
           });
-        });
+
+          logs.forEach((log) => {
+            const parsed = CONTRACT_INTERFACE.parseLog(log);
+            parsedEntries.push({
+              player: parsed.args.player,
+              score: Number(parsed.args.score),
+              updatedAt: Number(parsed.args.timestamp)
+            });
+          });
+        } catch (error) {
+          continue;
+        }
       }
 
       return parsedEntries;
     }
 
+    async function loadAllSubmissions(force = false) {
+      if (!force && state.allSubmissionsCache) {
+        return state.allSubmissionsCache;
+      }
+
+      if (state.contractMode !== "v2") {
+        return [];
+      }
+
+      const submissionCount = Number(await state.readContract.getSubmissionCount());
+      const pageSize = 200;
+      const submissions = [];
+
+      for (let start = 0; start < submissionCount; start += pageSize) {
+        const page = await state.readContract.getSubmissions(start, pageSize);
+        page.forEach((entry) => {
+          submissions.push({
+            submissionId: Number(entry.submissionId),
+            player: entry.player,
+            score: Number(entry.score),
+            updatedAt: Number(entry.timestamp)
+          });
+        });
+      }
+
+      state.allSubmissionsCache = submissions;
+      return submissions;
+    }
+
     async function buildWindowedLeaderboard(rangeKey) {
       const config = LEADERBOARD_CONFIG[rangeKey];
+      if (state.contractMode === "v2") {
+        const submissions = await loadAllSubmissions(false);
+        const cutoff = Math.floor(Date.now() / 1000) - config.seconds;
+        return submissions
+          .filter((entry) => entry.updatedAt >= cutoff)
+          .sort((left, right) => right.score - left.score || right.updatedAt - left.updatedAt)
+          .slice(0, 25);
+      }
+
       const latestBlock = await state.readProvider.getBlockNumber();
       const fromBlock = Math.max(0, latestBlock - config.lookbackBlocks);
       const entries = await fetchScoreEventEntries(fromBlock, latestBlock);
       const cutoff = Math.floor(Date.now() / 1000) - config.seconds;
-      const bestByPlayer = new Map();
-
-      entries.forEach((entry) => {
-        if (entry.updatedAt < cutoff) return;
-        const current = bestByPlayer.get(entry.player);
-        if (!current || entry.score > current.score || (entry.score === current.score && entry.updatedAt > current.updatedAt)) {
-          bestByPlayer.set(entry.player, entry);
-        }
-      });
-
-      return Array.from(bestByPlayer.values())
+      return entries
+        .filter((entry) => entry.updatedAt >= cutoff)
         .sort((left, right) => right.score - left.score || right.updatedAt - left.updatedAt)
-        .slice(0, 10);
+        .slice(0, 25);
     }
 
     async function loadLeaderboardRange(rangeKey, force = false) {
@@ -1844,7 +1893,7 @@
 
       let entries = [];
 
-      if (rangeKey === "all") {
+      if (rangeKey === "all" && state.contractMode === "legacy") {
         const topEntries = await state.readContract.getTopEntries();
         entries = topEntries.map((entry) => ({
           player: entry.player,
@@ -1852,7 +1901,15 @@
           updatedAt: Number(entry.updatedAt)
         }));
       } else {
-        entries = await buildWindowedLeaderboard(rangeKey);
+        if (rangeKey === "all" && state.contractMode === "v2") {
+          const submissions = await loadAllSubmissions(force);
+          entries = submissions
+            .slice()
+            .sort((left, right) => right.score - left.score || right.updatedAt - left.updatedAt)
+            .slice(0, 25);
+        } else {
+          entries = await buildWindowedLeaderboard(rangeKey);
+        }
       }
 
       state.leaderboards[rangeKey] = entries;
@@ -1893,14 +1950,35 @@
     }
 
     async function refreshLeaderboard(force = true) {
+      if (force) {
+        state.leaderboards = { all: null, weekly: null, daily: null };
+        state.allSubmissionsCache = null;
+      }
       return setLeaderboardRange(state.leaderboardRange, force);
     }
 
-    async function getAllTimeRankForPlayer(playerAddress) {
-      const entries = await loadLeaderboardRange("all", false);
-      const rankIndex = entries.findIndex((entry) => entry.player.toLowerCase() === playerAddress.toLowerCase());
+    async function getLatestSubmissionRankForPlayer(playerAddress, scoreValue) {
+      if (state.contractMode !== "v2") {
+        const entries = await loadLeaderboardRange("all", false);
+        const rankIndex = entries.findIndex((entry) => entry.player.toLowerCase() === playerAddress.toLowerCase());
+        return rankIndex === -1 ? "Outside Top 10" : `#${rankIndex + 1}`;
+      }
+
+      const playerSubmissionIds = await state.readContract.getPlayerSubmissionIds(playerAddress);
+      if (!playerSubmissionIds.length) {
+        return "Unavailable";
+      }
+
+      const latestSubmissionId = Number(playerSubmissionIds[playerSubmissionIds.length - 1]);
+      const submissions = await loadAllSubmissions(false);
+      const sorted = submissions
+        .slice()
+        .sort((left, right) => right.score - left.score || right.updatedAt - left.updatedAt || left.submissionId - right.submissionId);
+
+      const rankIndex = sorted.findIndex((entry) => entry.submissionId === latestSubmissionId);
       if (rankIndex === -1) {
-        return "Outside Top 10";
+        const fallbackIndex = sorted.findIndex((entry) => entry.player.toLowerCase() === playerAddress.toLowerCase() && entry.score === scoreValue);
+        return fallbackIndex === -1 ? "Unavailable" : `#${fallbackIndex + 1}`;
       }
       return `#${rankIndex + 1}`;
     }
@@ -2047,10 +2125,11 @@
         state.lastSubmittedScore = state.score;
         state.bestOnChainScore = Math.max(state.bestOnChainScore, state.score);
         state.leaderboards = { all: null, weekly: null, daily: null };
+        state.allSubmissionsCache = null;
         updateScoreUI();
         updateSubmissionState();
         await refreshLeaderboard();
-        const rankLabel = await getAllTimeRankForPlayer(state.walletAddress);
+        const rankLabel = await getLatestSubmissionRankForPlayer(state.walletAddress, state.score);
         setStatus("success", "Score Submitted", `Score ${state.score} confirmed on Base Mainnet. All-time rank: ${rankLabel}.`);
       } catch (error) {
         state.txState = "idle";
