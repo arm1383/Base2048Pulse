@@ -1412,6 +1412,10 @@
       readProvider: null,
       readContract: null,
       browserProvider: null,
+      walletProvider: null,
+      walletListenerProvider: null,
+      walletAccountsChangedHandler: null,
+      walletChainChangedHandler: null,
       signer: null,
       writeContract: null,
       minimumSubmitScore: 0,
@@ -1477,6 +1481,29 @@
         themeToggleButton: document.getElementById("themeToggleButton"),
         leaderboardTabs: Array.from(document.querySelectorAll(".leaderboard-tab"))
       });
+    }
+
+    function getMiniAppEthereumProvider() {
+      if (!state.isMiniApp) {
+        return null;
+      }
+
+      try {
+        let provider = null;
+        if (state.farcasterSdk?.wallet?.getEthereumProvider) {
+          provider = state.farcasterSdk.wallet.getEthereumProvider();
+        } else {
+          provider = state.farcasterSdk?.wallet?.ethProvider || null;
+        }
+
+        return provider && typeof provider.request === "function" ? provider : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function getActiveEthereumProvider() {
+      return getMiniAppEthereumProvider() || window.ethereum || null;
     }
 
     function buildBoardBackground() {
@@ -2279,8 +2306,8 @@
       updateSubmissionState();
     }
 
-    async function ensureBaseNetwork() {
-      const chainIdHex = await window.ethereum.request({ method: "eth_chainId" });
+    async function ensureBaseNetwork(provider) {
+      const chainIdHex = await provider.request({ method: "eth_chainId" });
       state.currentChainId = Number.parseInt(chainIdHex, 16);
       updateNetworkBadge();
 
@@ -2289,13 +2316,13 @@
       }
 
       try {
-        await window.ethereum.request({
+        await provider.request({
           method: "wallet_switchEthereumChain",
           params: [{ chainId: CHAIN_CONFIG.chainIdHex }]
         });
       } catch (error) {
         if (error && Number(error.code) === 4902) {
-          await window.ethereum.request({
+          await provider.request({
             method: "wallet_addEthereumChain",
             params: [{
               chainId: CHAIN_CONFIG.chainIdHex,
@@ -2310,32 +2337,53 @@
         }
       }
 
-      const updatedChainIdHex = await window.ethereum.request({ method: "eth_chainId" });
+      const updatedChainIdHex = await provider.request({ method: "eth_chainId" });
       state.currentChainId = Number.parseInt(updatedChainIdHex, 16);
       updateNetworkBadge();
       return state.currentChainId === CHAIN_CONFIG.chainIdDecimal;
     }
 
     async function connectWallet() {
-      if (!window.ethereum) {
-        setStatus("danger", "Wallet Missing", "Install a compatible wallet such as MetaMask to connect and submit scores.");
+      const provider = getActiveEthereumProvider();
+
+      if (!provider) {
+        const missingMessage = state.isMiniApp
+          ? "This Farcaster client is not exposing an Ethereum wallet provider right now. Open the Mini App in a wallet-enabled Farcaster client such as Warpcast, or open the site in a browser with a wallet extension."
+          : "Install a compatible wallet such as MetaMask to connect and submit scores.";
+        setStatus("danger", "Wallet Missing", missingMessage);
         return;
       }
 
       try {
         setStatus("success", "Connecting", "Approve the wallet connection request to continue.");
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        state.browserProvider = new ethers.BrowserProvider(window.ethereum);
+        let accounts = [];
+        try {
+          accounts = await provider.request({ method: "eth_accounts" });
+        } catch (error) {
+          accounts = [];
+        }
+
+        if (!Array.isArray(accounts) || !accounts.length) {
+          accounts = await provider.request({ method: "eth_requestAccounts" });
+        }
+
+        if (!Array.isArray(accounts) || !accounts.length) {
+          throw new Error("No wallet account is available.");
+        }
+
+        state.walletProvider = provider;
+        state.browserProvider = new ethers.BrowserProvider(provider);
         state.signer = await state.browserProvider.getSigner();
         const address = await state.signer.getAddress();
         state.walletAddress = ethers.getAddress(address);
 
-        const ready = await ensureBaseNetwork();
+        const ready = await ensureBaseNetwork(provider);
         if (!ready) {
           throw new Error("Base Mainnet is required.");
         }
 
         state.writeContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.signer);
+        attachWalletListeners(provider);
 
         elements.walletStatusValue.textContent = shortenAddress(state.walletAddress);
         elements.connectHeroButton.textContent = "Wallet Connected";
@@ -2528,17 +2576,38 @@
         state.farcasterSdk = sdk;
         await sdk.actions.ready({ disableNativeGestures: true });
         state.isMiniApp = true;
+        attachWalletListeners(getActiveEthereumProvider());
       } catch (error) {
         state.isMiniApp = false;
       }
     }
 
-    function attachWalletListeners() {
-      if (!window.ethereum || !window.ethereum.on) return;
+    function detachWalletListeners() {
+      const provider = state.walletListenerProvider;
+      if (!provider || typeof provider.removeListener !== "function") return;
 
-      window.ethereum.on("accountsChanged", async (accounts) => {
+      if (state.walletAccountsChangedHandler) {
+        provider.removeListener("accountsChanged", state.walletAccountsChangedHandler);
+      }
+      if (state.walletChainChangedHandler) {
+        provider.removeListener("chainChanged", state.walletChainChangedHandler);
+      }
+
+      state.walletListenerProvider = null;
+      state.walletAccountsChangedHandler = null;
+      state.walletChainChangedHandler = null;
+    }
+
+    function attachWalletListeners(provider = getActiveEthereumProvider()) {
+      if (!provider || typeof provider.on !== "function") return;
+      if (state.walletListenerProvider === provider) return;
+
+      detachWalletListeners();
+
+      state.walletAccountsChangedHandler = async (accounts) => {
         if (!accounts.length) {
           state.walletAddress = null;
+          state.walletProvider = null;
           state.browserProvider = null;
           state.signer = null;
           state.writeContract = null;
@@ -2564,16 +2633,20 @@
         }
         await refreshPlayerBest();
         updateNetworkBadge();
-      });
+      };
 
-      window.ethereum.on("chainChanged", async (chainIdHex) => {
+      state.walletChainChangedHandler = async (chainIdHex) => {
         state.currentChainId = Number.parseInt(chainIdHex, 16);
         updateNetworkBadge();
         updateSubmissionState();
         if (state.walletAddress) {
           await refreshPlayerBest();
         }
-      });
+      };
+
+      provider.on("accountsChanged", state.walletAccountsChangedHandler);
+      provider.on("chainChanged", state.walletChainChangedHandler);
+      state.walletListenerProvider = provider;
     }
 
     function attachEvents() {
