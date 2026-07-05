@@ -973,6 +973,22 @@
       gap: 10px;
     }
 
+    .wallet-option-grid {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .wallet-option-button {
+      width: 100%;
+      justify-content: flex-start;
+      text-align: left;
+    }
+
+    .wallet-option-note {
+      margin-top: 16px;
+    }
+
     .sr-only {
       position: absolute;
       width: 1px;
@@ -1229,7 +1245,7 @@
             </div>
 
             <button id="connectSidebarButton" class="button button-primary" type="button">Connect Wallet</button>
-            <p class="hint">When configured, iPhone Safari uses WalletConnect / Reown if no Mini App or injected wallet provider is available.</p>
+            <p class="hint">On iPhone Safari, the safest path is to open the game inside a wallet app browser such as MetaMask, Coinbase Wallet, or Trust Wallet.</p>
           </div>
         </section>
 
@@ -1323,6 +1339,24 @@
         <li>You can submit your current score at any point in a run, even before game over.</li>
         <li>Refresh the leaderboard after confirmation to see the updated ranking.</li>
       </ol>
+    </div>
+  </div>
+
+  <div class="modal" id="safariWalletModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="section-title">
+        <div>
+          <h3>Open In Wallet App</h3>
+          <p>Safari on iPhone connects more reliably when the game is opened inside a wallet app browser.</p>
+        </div>
+        <button id="closeSafariWalletButton" class="button button-ghost" type="button">Close</button>
+      </div>
+      <div class="wallet-option-grid">
+        <button id="openMetaMaskDeepLinkButton" class="button button-primary wallet-option-button" type="button">Open in MetaMask</button>
+        <button id="openCoinbaseDeepLinkButton" class="button button-secondary wallet-option-button" type="button">Open in Coinbase Wallet</button>
+        <button id="openTrustDeepLinkButton" class="button button-secondary wallet-option-button" type="button">Open in Trust Wallet</button>
+      </div>
+      <p class="wallet-option-note">After the wallet app opens, let the game load there and tap Connect Wallet again inside that wallet browser. This bypasses Safari popup blocking and follows the recommended mobile deep-link flow.</p>
     </div>
   </div>
 
@@ -1486,6 +1520,11 @@
         openHelpButton: document.getElementById("openHelpButton"),
         closeHelpButton: document.getElementById("closeHelpButton"),
         helpModal: document.getElementById("helpModal"),
+        safariWalletModal: document.getElementById("safariWalletModal"),
+        closeSafariWalletButton: document.getElementById("closeSafariWalletButton"),
+        openMetaMaskDeepLinkButton: document.getElementById("openMetaMaskDeepLinkButton"),
+        openCoinbaseDeepLinkButton: document.getElementById("openCoinbaseDeepLinkButton"),
+        openTrustDeepLinkButton: document.getElementById("openTrustDeepLinkButton"),
         themeToggleButton: document.getElementById("themeToggleButton"),
         leaderboardTabs: Array.from(document.querySelectorAll(".leaderboard-tab"))
       });
@@ -1522,6 +1561,87 @@
       return /Safari/i.test(userAgent) && !/Chrome|CriOS|Chromium|Android|FxiOS|EdgiOS/i.test(userAgent);
     }
 
+    function isLikelyIOSSafariBrowser() {
+      const userAgent = navigator.userAgent || "";
+      return isLikelySafariBrowser() && /iPhone|iPad|iPod/i.test(userAgent);
+    }
+
+    function buildMetaMaskDappDeepLink(url) {
+      const sanitizedUrl = String(url || "").replace(/^https?:\/\//i, "");
+      return `https://link.metamask.io/dapp/${encodeURIComponent(sanitizedUrl)}`;
+    }
+
+    function buildCoinbaseUniversalLink(url) {
+      return `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(String(url || ""))}`;
+    }
+
+    function buildCoinbaseSchemeLink(url) {
+      return `cbwallet://dapp?url=${encodeURIComponent(String(url || ""))}`;
+    }
+
+    function buildTrustWalletUniversalLink(url) {
+      return `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(String(url || ""))}`;
+    }
+
+    function buildTrustWalletSchemeLink(url) {
+      return `trust://open_url?coin_id=60&url=${encodeURIComponent(String(url || ""))}`;
+    }
+
+    function setModalOpen(modalElement, isOpen) {
+      modalElement.classList.toggle("is-open", isOpen);
+      modalElement.setAttribute("aria-hidden", String(!isOpen));
+    }
+
+    function openSafariWalletModal() {
+      setModalOpen(elements.safariWalletModal, true);
+    }
+
+    function closeSafariWalletModal() {
+      setModalOpen(elements.safariWalletModal, false);
+    }
+
+    function openWalletAppWithFallback(primaryUrl, fallbackUrl = "") {
+      const fallbackTimer = window.setTimeout(() => {
+        if (!document.hidden && fallbackUrl) {
+          window.location.href = fallbackUrl;
+        }
+      }, 900);
+
+      const cancelFallback = () => {
+        window.clearTimeout(fallbackTimer);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        window.removeEventListener("pagehide", cancelFallback);
+      };
+
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          cancelFallback();
+        }
+      };
+
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      window.addEventListener("pagehide", cancelFallback, { once: true });
+      window.location.href = primaryUrl;
+    }
+
+    function continueInMetaMask() {
+      closeSafariWalletModal();
+      setStatus("success", "Continue In MetaMask", "MetaMask is opening its in-app browser for the game. Tap Connect Wallet again after the page finishes loading there.");
+      openWalletAppWithFallback(buildMetaMaskDappDeepLink(getAppUrl()));
+    }
+
+    function continueInCoinbaseWallet() {
+      closeSafariWalletModal();
+      setStatus("success", "Continue In Coinbase Wallet", "Coinbase Wallet is opening its in-app browser for the game. Tap Connect Wallet again after the page finishes loading there.");
+      openWalletAppWithFallback(buildCoinbaseSchemeLink(getAppUrl()), buildCoinbaseUniversalLink(getAppUrl()));
+    }
+
+    function continueInTrustWallet() {
+      closeSafariWalletModal();
+      setStatus("success", "Continue In Trust Wallet", "Trust Wallet is opening its in-app browser for the game. Tap Connect Wallet again after the page finishes loading there.");
+      openWalletAppWithFallback(buildTrustWalletSchemeLink(getAppUrl()), buildTrustWalletUniversalLink(getAppUrl()));
+    }
+
     function getWalletMissingMessage(source, hostedMiniApp) {
       if (source === "walletconnect_unconfigured") {
         return REOWN_REQUIRED_MESSAGE;
@@ -1532,6 +1652,9 @@
       }
 
       if (isLikelySafariBrowser()) {
+        if (source === "safari_manual_deeplink") {
+          return "Safari on iPhone should continue inside a wallet app browser instead of waiting for a popup provider. Choose MetaMask, Coinbase Wallet, or Trust Wallet to continue.";
+        }
         return hasConfiguredReownProjectId()
           ? "No injected wallet was detected in iPhone Safari, so the app is ready to use the WalletConnect / Reown fallback. If nothing opens, confirm that the WalletConnect bundle can load and that your mobile wallet supports WalletConnect."
           : "No injected wallet was detected in iPhone Safari. Replace the placeholder REOWN_PROJECT_ID in index.html to activate the WalletConnect / Reown fallback.";
@@ -1780,6 +1903,10 @@
         return { provider: injectedProvider, source: "injected" };
       }
 
+      if (isLikelyIOSSafariBrowser()) {
+        return { provider: null, source: "safari_manual_deeplink" };
+      }
+
       try {
         const walletConnectProvider = await loadWalletConnectProvider();
         if (isUsableEip1193Provider(walletConnectProvider)) {
@@ -1795,13 +1922,22 @@
     async function waitForActiveEthereumProvider(maxAttempts = 6, delayMs = 350) {
       for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
         const result = await getActiveEthereumProvider();
-        if (result.provider || result.source === "walletconnect_unconfigured" || result.source === "walletconnect_error") {
+        if (
+          result.provider ||
+          result.source === "walletconnect_unconfigured" ||
+          result.source === "walletconnect_error" ||
+          result.source === "safari_manual_deeplink"
+        ) {
           return result;
         }
 
         if (attempt < maxAttempts - 1) {
           await new Promise((resolve) => window.setTimeout(resolve, delayMs));
         }
+      }
+
+      if (isLikelyIOSSafariBrowser()) {
+        return { provider: null, source: "safari_manual_deeplink" };
       }
 
       return { provider: null, source: hasConfiguredReownProjectId() ? "none" : "walletconnect_unconfigured" };
@@ -2649,6 +2785,12 @@
       const hostedMiniApp = await detectMiniAppHost();
 
       if (!provider) {
+        if (source === "safari_manual_deeplink") {
+          openSafariWalletModal();
+          setStatus("danger", "Wallet Missing", getWalletMissingMessage(source, hostedMiniApp));
+          return;
+        }
+
         const missingMessage = source === "walletconnect_error"
           ? getWalletLoaderErrorMessage(providerError)
           : getWalletMissingMessage(source, hostedMiniApp);
@@ -2851,13 +2993,11 @@
     }
 
     function openHelp() {
-      elements.helpModal.classList.add("is-open");
-      elements.helpModal.setAttribute("aria-hidden", "false");
+      setModalOpen(elements.helpModal, true);
     }
 
     function closeHelp() {
-      elements.helpModal.classList.remove("is-open");
-      elements.helpModal.setAttribute("aria-hidden", "true");
+      setModalOpen(elements.helpModal, false);
     }
 
     function shareOnX() {
@@ -2986,6 +3126,10 @@
       elements.shareFarcasterButton.addEventListener("click", shareOnFarcaster);
       elements.openHelpButton.addEventListener("click", openHelp);
       elements.closeHelpButton.addEventListener("click", closeHelp);
+      elements.closeSafariWalletButton.addEventListener("click", closeSafariWalletModal);
+      elements.openMetaMaskDeepLinkButton.addEventListener("click", continueInMetaMask);
+      elements.openCoinbaseDeepLinkButton.addEventListener("click", continueInCoinbaseWallet);
+      elements.openTrustDeepLinkButton.addEventListener("click", continueInTrustWallet);
       elements.leaderboardTabs.forEach((button) => {
         button.addEventListener("click", () => {
           setLeaderboardRange(button.dataset.range, false);
@@ -2993,6 +3137,9 @@
       });
       elements.helpModal.addEventListener("click", (event) => {
         if (event.target === elements.helpModal) closeHelp();
+      });
+      elements.safariWalletModal.addEventListener("click", (event) => {
+        if (event.target === elements.safariWalletModal) closeSafariWalletModal();
       });
       elements.themeToggleButton.addEventListener("click", toggleTheme);
 
