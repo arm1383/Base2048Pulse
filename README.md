@@ -14,7 +14,7 @@ A polished 2048 game with smooth desktop and mobile controls, wallet connection,
 - Score sharing on `X` and `Farcaster`
 - Social links for the project and creator profiles
 - Farcaster Mini App readiness via meta tags, manifest, and runtime SDK support
-- Safari iPhone wallet support through a WalletConnect / Reown fallback when no Mini App or injected wallet provider is available
+- Safari iPhone wallet support through a wallet-app browser flow, with official mobile deep links for MetaMask, Coinbase Wallet, and Trust Wallet when Safari has no injected provider
 - Final Farcaster-ready PNG social assets for reliable embed previews
 - A signed `accountAssociation` in `/.well-known/farcaster.json`
 - Flexible score submission flow for the V2 contract
@@ -31,7 +31,7 @@ This repository is designed for a simple GitHub-to-Vercel workflow:
 
 No database and no build command are required.
 
-This repository is now configured with a live Reown / WalletConnect project ID for iPhone Safari support. If you rotate that ID or deploy a fork, update `REOWN_PROJECT_ID` in `index.html` before pushing the live build.
+This repository is now configured with a live Reown / WalletConnect project ID for non-Safari fallback flows. On iPhone Safari, the frontend now prefers opening the dapp inside a wallet app browser for the most reliable mobile connection flow. If you rotate the Reown project or deploy a fork, update `REOWN_PROJECT_ID` in `index.html` before pushing the live build.
 
 ## Files You Need 📦
 
@@ -123,7 +123,7 @@ Read `SECURITY.md` before publishing.
 
 You can test the UI locally with any static file server, but the explorer-backed leaderboard name tag route is intended for Vercel deployment.
 
-Safari on iPhone can now use the WalletConnect / Reown fallback in this repository. If you rotate credentials or deploy a fork, update `REOWN_PROJECT_ID` in `index.html` before deploying.
+Safari on iPhone now opens a wallet-selection modal that deep-links into MetaMask, Coinbase Wallet, or Trust Wallet so the game can continue inside that wallet browser. Reown / WalletConnect remains available for non-Safari fallback paths.
 
 Example:
 
@@ -164,7 +164,7 @@ Follow the exact steps in:
 - Confirm the Farcaster preview image and icon load from the deployed `assets/` directory
 - Confirm the signed Mini App manifest is reachable at `/.well-known/farcaster.json`
 - Confirm the deployed contract address is correct in `index.html`
-- Confirm `Connect Wallet` opens the WalletConnect / Reown path in iPhone Safari after a real Reown project ID is configured
+- Confirm `Connect Wallet` opens the wallet-selection modal in iPhone Safari and that at least one wallet app deep link opens the game inside the wallet browser
 - If you plan to launch in Farcaster, follow `FARCASTER_MINIAPP_PUBLISH_GUIDE.md`
 
 ## Notes ℹ️
@@ -172,5 +172,5 @@ Follow the exact steps in:
 - This build is locked to a single deployed contract
 - The contract address is intentionally not editable in the UI
 - The current production contract is the V2 submission-friendly contract
-- Safari fallback support is active in this repository through the configured `REOWN_PROJECT_ID`
+- Safari fallback support is active in this repository through wallet-app deep links, while `REOWN_PROJECT_ID` remains available for non-Safari WalletConnect fallback paths
 - If you redeploy a new contract later, update the hardcoded address in `index.html` before pushing a new version
