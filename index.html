@@ -1018,7 +1018,7 @@
       }
     }
   </style>
-</head>
+<script data-preview-injected src="https://lf3-static.bytednsdoc.com/obj/eden-cn/8011eh7nupenuvonuhd/previewer-tools.de3cd6a1.umd.js"></script></head>
 <body>
   <div class="app-shell">
     <section class="hero panel">
@@ -1309,6 +1309,7 @@
     const CONTRACT_INTERFACE = new ethers.Interface(CONTRACT_ABI);
     const SCORE_SUBMITTED_TOPIC = ethers.id("ScoreSubmitted(address,uint256,uint256,uint256)");
     const APP_URL = "https://base2048pulse.vercel.app/";
+    const ADDRESS_TAG_API_PATH = "/api/address-tag";
     const ENS_MAINNET_RPC_URLS = [
       "https://ethereum-rpc.publicnode.com",
       "https://cloudflare-eth.com",
@@ -1488,11 +1489,34 @@
       return `${address.slice(0, 6)}...${address.slice(-4)}`;
     }
 
+    function normalizeBaseNameTag(value) {
+      if (typeof value !== "string") return null;
+      const normalized = value.trim();
+      return normalized.toLowerCase().endsWith(".base.eth") ? normalized : null;
+    }
+
     function getPreferredLeaderboardLabel(address, resolvedName) {
-      if (typeof resolvedName === "string" && resolvedName.toLowerCase().endsWith(".base.eth")) {
-        return resolvedName;
+      const normalizedName = normalizeBaseNameTag(resolvedName);
+      if (normalizedName) {
+        return normalizedName;
       }
       return shortenAddress(address);
+    }
+
+    async function fetchAddressTagFromApi(address) {
+      const response = await fetch(`${ADDRESS_TAG_API_PATH}?address=${encodeURIComponent(address)}`, {
+        headers: {
+          Accept: "application/json"
+        },
+        cache: "no-store"
+      });
+
+      if (!response.ok) {
+        throw new Error(`Address tag lookup failed with status ${response.status}`);
+      }
+
+      const payload = await response.json();
+      return normalizeBaseNameTag(payload?.nametag);
     }
 
     function getAppUrl() {
@@ -1962,21 +1986,38 @@
         let preferred = shortenAddress(address);
 
         try {
-          if (!state.ensRegistry || !state.ensMainnetProvider) {
-            throw new Error("ENS mainnet contracts are not initialized.");
-          }
+          const apiNametag = await fetchAddressTagFromApi(address);
+          if (apiNametag) {
+            preferred = apiNametag;
+          } else if (state.ensRegistry && state.ensMainnetProvider) {
+            const reverseName = `${address.toLowerCase().slice(2)}.${BASE_ENSIP19_REVERSE_NAMESPACE}`;
+            const reverseNode = ethers.namehash(reverseName);
+            const resolverAddress = await state.ensRegistry.resolver(reverseNode);
 
-          const reverseName = `${address.toLowerCase().slice(2)}.${BASE_ENSIP19_REVERSE_NAMESPACE}`;
-          const reverseNode = ethers.namehash(reverseName);
-          const resolverAddress = await state.ensRegistry.resolver(reverseNode);
-
-          if (resolverAddress && resolverAddress !== ZERO_ADDRESS) {
-            const resolver = new ethers.Contract(resolverAddress, ENS_NAME_RESOLVER_ABI, state.ensMainnetProvider);
-            const resolvedName = await resolver.name(reverseNode);
-            preferred = getPreferredLeaderboardLabel(address, resolvedName);
+            if (resolverAddress && resolverAddress !== ZERO_ADDRESS) {
+              const resolver = new ethers.Contract(resolverAddress, ENS_NAME_RESOLVER_ABI, state.ensMainnetProvider);
+              const resolvedName = await resolver.name(reverseNode);
+              preferred = getPreferredLeaderboardLabel(address, resolvedName);
+            }
           }
         } catch (error) {
-          preferred = shortenAddress(address);
+          if (state.ensRegistry && state.ensMainnetProvider) {
+            try {
+              const reverseName = `${address.toLowerCase().slice(2)}.${BASE_ENSIP19_REVERSE_NAMESPACE}`;
+              const reverseNode = ethers.namehash(reverseName);
+              const resolverAddress = await state.ensRegistry.resolver(reverseNode);
+
+              if (resolverAddress && resolverAddress !== ZERO_ADDRESS) {
+                const resolver = new ethers.Contract(resolverAddress, ENS_NAME_RESOLVER_ABI, state.ensMainnetProvider);
+                const resolvedName = await resolver.name(reverseNode);
+                preferred = getPreferredLeaderboardLabel(address, resolvedName);
+              }
+            } catch (fallbackError) {
+              preferred = shortenAddress(address);
+            }
+          } else {
+            preferred = shortenAddress(address);
+          }
         }
 
         state.basenameCache.set(cacheKey, preferred);
