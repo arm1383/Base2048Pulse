@@ -1,12 +1,12 @@
 {
   "accountAssociation": {
-    "header": "REPLACE_WITH_FARCASTER_HEADER",
-    "payload": "REPLACE_WITH_FARCASTER_PAYLOAD",
-    "signature": "REPLACE_WITH_FARCASTER_SIGNATURE"
+    "header": "eyJmaWQiOjEzNzU2LCJ0eXBlIjoiY3VzdG9keSIsImtleSI6IjB4OTQyMzZkMGYxRDk5NjBkOUM0NmE3YjQ5QkVEODUyOWE1OUNkN0RlMCJ9",
+    "payload": "eyJkb21haW4iOiJiYXNlMjA0OHB1bHNlLnZlcmNlbC5hcHAifQ",
+    "signature": "pPC4ZKe4ByE2xE7fppb15G9Pwy+tcc5zofqFNX+7WWF5aPtYI9WxGTaPGh905VVtpbuAbM1LMhrgJVacyidLzhw="
   },
   "miniapp": {
     "version": "1",
-    "name": "Base2048Pulse",
+    "name": "Base 2048 Pulse",
     "homeUrl": "https://base2048pulse.vercel.app/",
     "iconUrl": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=minimal%20glossy%20app%20icon%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20electric%20blue%20tile%2C%20premium%20dark%20background%2C%20clean%20icon%2C%20centered%20symbol%2C%20no%20text&image_size=square_hd",
     "imageUrl": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=futuristic%20arcade%20cover%20art%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20glowing%20blue%20grid%2C%20premium%20dark%20interface%2C%20neon%20tiles%2C%20high%20contrast%2C%20clean%20game%20poster%2C%20no%20distorted%20text&image_size=landscape_4_3",
@@ -16,7 +16,7 @@
   },
   "frame": {
     "version": "1",
-    "name": "Base2048Pulse",
+    "name": "Base 2048 Pulse",
     "homeUrl": "https://base2048pulse.vercel.app/",
     "iconUrl": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=minimal%20glossy%20app%20icon%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20electric%20blue%20tile%2C%20premium%20dark%20background%2C%20clean%20icon%2C%20centered%20symbol%2C%20no%20text&image_size=square_hd",
     "imageUrl": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=futuristic%20arcade%20cover%20art%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20glowing%20blue%20grid%2C%20premium%20dark%20interface%2C%20neon%20tiles%2C%20high%20contrast%2C%20clean%20game%20poster%2C%20no%20distorted%20text&image_size=landscape_4_3",
