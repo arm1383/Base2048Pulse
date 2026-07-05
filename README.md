@@ -63,7 +63,6 @@ These files are recommended for a complete public repository, but they are not r
 - `SECURITY.md`
 - `GITHUB_VERCEL_DEPLOYMENT_GUIDE.md`
 - `FARCASTER_MINIAPP_PUBLISH_GUIDE.md`
-- `.gitignore`
 
 ## Recommended Repository Structure 🗂️
 
@@ -82,8 +81,7 @@ These files are recommended for a complete public repository, but they are not r
 │   ├── farcaster-cover.png
 │   └── farcaster-icon.png
 ├── index.html
-├── vercel.json
-└── .gitignore
+└── vercel.json
 ```
 
 ## Smart Contract Interface 🧠
