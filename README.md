@@ -31,7 +31,7 @@ This repository is designed for a simple GitHub-to-Vercel workflow:
 
 No database and no build command are required.
 
-If iPhone Safari wallet support matters for your production deployment, replace `REPLACE_WITH_REOWN_PROJECT_ID` in `index.html` with a real Reown / WalletConnect project ID before pushing the live build.
+This repository is now configured with a live Reown / WalletConnect project ID for iPhone Safari support. If you rotate that ID or deploy a fork, update `REOWN_PROJECT_ID` in `index.html` before pushing the live build.
 
 ## Files You Need 📦
 
@@ -123,7 +123,7 @@ Read `SECURITY.md` before publishing.
 
 You can test the UI locally with any static file server, but the explorer-backed leaderboard name tag route is intended for Vercel deployment.
 
-If you want Safari on iPhone to open a wallet connection flow instead of showing the placeholder owner message, replace `REPLACE_WITH_REOWN_PROJECT_ID` in `index.html` before deploying.
+Safari on iPhone can now use the WalletConnect / Reown fallback in this repository. If you rotate credentials or deploy a fork, update `REOWN_PROJECT_ID` in `index.html` before deploying.
 
 Example:
 
@@ -172,5 +172,5 @@ Follow the exact steps in:
 - This build is locked to a single deployed contract
 - The contract address is intentionally not editable in the UI
 - The current production contract is the V2 submission-friendly contract
-- Safari fallback support is shipped in the frontend, but it becomes fully active only after replacing the placeholder `REOWN_PROJECT_ID`
+- Safari fallback support is active in this repository through the configured `REOWN_PROJECT_ID`
 - If you redeploy a new contract later, update the hardcoded address in `index.html` before pushing a new version
