@@ -1,6 +1,6 @@
 # Base 2048 Pulse 🎮🔵
 
-A polished single-file 2048 game with smooth desktop and mobile controls, wallet connection, flexible on-chain score submission, multi-range leaderboards, and social sharing on Base Mainnet. ⚡
+A polished 2048 game with smooth desktop and mobile controls, wallet connection, flexible on-chain score submission, multi-range leaderboards, and social sharing on Base Mainnet. ⚡
 
 ## Live Contract 📜
 
@@ -16,6 +16,7 @@ A polished single-file 2048 game with smooth desktop and mobile controls, wallet
 - Farcaster Mini App readiness via meta tags, manifest, and runtime SDK support
 - Flexible score submission flow for the V2 contract
 - Support for storing all submissions and calculating broader leaderboard ranking
+- Explorer-backed `base.eth` name display in the leaderboard through a small Vercel API route
 
 ## Repository Purpose 🚀
 
@@ -23,13 +24,14 @@ This repository is designed for a simple GitHub-to-Vercel workflow:
 
 1. Push the repository to your GitHub account
 2. Import the repository into Vercel
-3. Deploy as a static site
+3. Deploy the frontend plus a tiny Vercel serverless route for leaderboard name tags
 
-No backend, no database, and no build command are required.
+No database and no build command are required.
 
 ## Files You Need 📦
 
 - `index.html` — the full frontend game, UI, wallet flow, and leaderboard logic
+- `api/address-tag.js` — a lightweight Vercel API route for BaseScan / Etherscan-backed `base.eth` name lookup
 - `Base2048Pulse.sol` — the Remix-compatible Solidity contract source
 - `vercel.json` — minimal Vercel configuration
 - `README.md` — project overview and usage notes
@@ -45,6 +47,8 @@ No backend, no database, and no build command are required.
 ├── GITHUB_VERCEL_DEPLOYMENT_GUIDE.md
 ├── README.md
 ├── SECURITY.md
+├── api/
+│   └── address-tag.js
 ├── index.html
 ├── vercel.json
 └── .gitignore
@@ -83,7 +87,7 @@ Read `SECURITY.md` before publishing.
 
 ## Local Test 🧪
 
-You can test locally with any static file server.
+You can test the UI locally with any static file server, but the explorer-backed leaderboard name tag route is intended for Vercel deployment.
 
 Example:
 
@@ -106,6 +110,7 @@ Follow the exact steps in:
 ## Before Publishing ✅
 
 - Verify the contract on BaseScan
+- Optionally add `ETHERSCAN_API_KEY` in Vercel Project Settings for the most reliable explorer metadata lookup
 - Test one real wallet connection on Base Mainnet
 - Test one real score submission
 - Confirm the leaderboard refreshes correctly
