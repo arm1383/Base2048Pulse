@@ -16,7 +16,6 @@ Make sure the folder contains these files:
 - `SECURITY.md`
 - `GITHUB_VERCEL_DEPLOYMENT_GUIDE.md`
 - `vercel.json`
-- `.gitignore`
 
 Files that are not required for publishing should not be included.
 
@@ -38,7 +37,7 @@ If you want the smallest final deployable set, these files alone are enough:
 4. Enter a repository name
 5. Use this exact repository name: `Base2048Pulse`
 6. Choose `Public` or `Private`
-7. Do not initialize it with a README, `.gitignore`, or license if you are uploading this prepared folder
+7. Do not initialize it with a README or license if you are uploading this prepared folder
 8. Click `Create repository`
 
 ## 3. Upload the Project to GitHub
