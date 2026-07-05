@@ -63,7 +63,6 @@ These files are recommended for a complete public repository, but they are not r
 - `SECURITY.md`
 - `GITHUB_VERCEL_DEPLOYMENT_GUIDE.md`
 - `FARCASTER_MINIAPP_PUBLISH_GUIDE.md`
-- `.env.example`
 - `.gitignore`
 
 ## Recommended Repository Structure 🗂️
@@ -75,7 +74,6 @@ These files are recommended for a complete public repository, but they are not r
 ├── SECURITY.md
 ├── GITHUB_VERCEL_DEPLOYMENT_GUIDE.md
 ├── FARCASTER_MINIAPP_PUBLISH_GUIDE.md
-├── .env.example
 ├── .well-known/
 │   └── farcaster.json
 ├── api/
