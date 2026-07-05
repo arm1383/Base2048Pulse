@@ -1377,6 +1377,8 @@
     const ENS_NAME_RESOLVER_ABI = [
       "function name(bytes32 node) view returns (string)"
     ];
+    const MINIAPP_HOST_TIMEOUT_MS = 1500;
+    const MINIAPP_WALLET_TIMEOUT_MS = 2500;
     const LEADERBOARD_CONFIG = {
       all: {
         label: "All-Time",
@@ -1483,17 +1485,68 @@
       });
     }
 
-    function getMiniAppEthereumProvider() {
-      if (!state.isMiniApp) {
+    function withTimeout(promiseLike, timeoutMs, fallbackValue = null) {
+      return Promise.race([
+        Promise.resolve(promiseLike),
+        new Promise((resolve) => {
+          window.setTimeout(() => resolve(fallbackValue), timeoutMs);
+        })
+      ]);
+    }
+
+    function pickInjectedEthereumProvider() {
+      if (window.coinbaseWalletExtension && typeof window.coinbaseWalletExtension.request === "function") {
+        return window.coinbaseWalletExtension;
+      }
+
+      if (Array.isArray(window.ethereum?.providers)) {
+        const preferredInjectedProvider = window.ethereum.providers.find((provider) => (
+          provider &&
+          typeof provider.request === "function" &&
+          (provider.isCoinbaseWallet || provider.isBase || provider.isMetaMask)
+        ));
+
+        if (preferredInjectedProvider) {
+          return preferredInjectedProvider;
+        }
+      }
+
+      if (window.ethereum && typeof window.ethereum.request === "function") {
+        return window.ethereum;
+      }
+
+      return null;
+    }
+
+    async function detectMiniAppHost() {
+      if (!state.farcasterSdk) {
+        return null;
+      }
+
+      try {
+        if (typeof state.farcasterSdk.isInMiniApp === "function") {
+          const isHostedMiniApp = await withTimeout(state.farcasterSdk.isInMiniApp(), MINIAPP_HOST_TIMEOUT_MS, false);
+          return Boolean(isHostedMiniApp);
+        }
+      } catch (error) {
+        return false;
+      }
+
+      return Boolean(state.isMiniApp);
+    }
+
+    async function getMiniAppEthereumProvider() {
+      const hasMiniAppHost = await detectMiniAppHost();
+      if (!hasMiniAppHost) {
         return null;
       }
 
       try {
         let provider = null;
         if (state.farcasterSdk?.wallet?.getEthereumProvider) {
-          provider = state.farcasterSdk.wallet.getEthereumProvider();
+          provider = await withTimeout(state.farcasterSdk.wallet.getEthereumProvider(), MINIAPP_WALLET_TIMEOUT_MS, null);
         } else {
-          provider = state.farcasterSdk?.wallet?.ethProvider || null;
+          provider = await withTimeout(state.farcasterSdk?.wallet?.ethProvider || null, MINIAPP_WALLET_TIMEOUT_MS, null);
         }
 
         return provider && typeof provider.request === "function" ? provider : null;
@@ -1502,8 +1555,23 @@
       }
     }
 
-    function getActiveEthereumProvider() {
-      return getMiniAppEthereumProvider() || window.ethereum || null;
+    async function getActiveEthereumProvider() {
+      return await getMiniAppEthereumProvider() || pickInjectedEthereumProvider();
+    }
+
+    async function waitForActiveEthereumProvider(maxAttempts = 6, delayMs = 350) {
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const provider = await getActiveEthereumProvider();
+        if (provider) {
+          return provider;
+        }
+
+        if (attempt < maxAttempts - 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+        }
+      }
+
+      return null;
     }
 
     function buildBoardBackground() {
@@ -2344,11 +2412,12 @@
     }
 
     async function connectWallet() {
-      const provider = getActiveEthereumProvider();
+      const provider = await waitForActiveEthereumProvider();
+      const hostedMiniApp = await detectMiniAppHost();
 
       if (!provider) {
-        const missingMessage = state.isMiniApp
-          ? "This Farcaster client is not exposing an Ethereum wallet provider right now. Open the Mini App in a wallet-enabled Farcaster client such as Warpcast, or open the site in a browser with a wallet extension."
+        const missingMessage = hostedMiniApp || state.isMiniApp
+          ? "This mobile client did not expose a usable Ethereum wallet provider to the Mini App. If you are testing inside Base App or another in-app browser, try opening the Mini App in Warpcast. If you are already in Warpcast, update the app and test again."
           : "Install a compatible wallet such as MetaMask to connect and submit scores.";
         setStatus("danger", "Wallet Missing", missingMessage);
         return;
@@ -2574,9 +2643,9 @@
       try {
         const { sdk } = await import("https://esm.sh/@farcaster/miniapp-sdk");
         state.farcasterSdk = sdk;
-        await sdk.actions.ready({ disableNativeGestures: true });
-        state.isMiniApp = true;
-        attachWalletListeners(getActiveEthereumProvider());
+        await withTimeout(sdk.actions.ready({ disableNativeGestures: true }), MINIAPP_HOST_TIMEOUT_MS, null);
+        state.isMiniApp = await detectMiniAppHost();
+        attachWalletListeners(pickInjectedEthereumProvider());
       } catch (error) {
         state.isMiniApp = false;
       }
@@ -2598,7 +2667,7 @@
       state.walletChainChangedHandler = null;
     }
 
-    function attachWalletListeners(provider = getActiveEthereumProvider()) {
+    function attachWalletListeners(provider = pickInjectedEthereumProvider()) {
       if (!provider || typeof provider.on !== "function") return;
       if (state.walletListenerProvider === provider) return;
 
