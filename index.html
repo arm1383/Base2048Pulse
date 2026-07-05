@@ -1229,6 +1229,7 @@
             </div>
 
             <button id="connectSidebarButton" class="button button-primary" type="button">Connect Wallet</button>
+            <p class="hint">When configured, iPhone Safari uses WalletConnect / Reown if no Mini App or injected wallet provider is available.</p>
           </div>
         </section>
 
@@ -1379,6 +1380,8 @@
     ];
     const MINIAPP_HOST_TIMEOUT_MS = 1500;
     const MINIAPP_WALLET_TIMEOUT_MS = 2500;
+    const REOWN_PROJECT_ID = "REPLACE_WITH_REOWN_PROJECT_ID";
+    const REOWN_REQUIRED_MESSAGE = "Safari wallet support is prepared, but the Reown projectId is still placeholder-only. Replace REOWN_PROJECT_ID in index.html to activate WalletConnect on mobile browsers.";
     const LEADERBOARD_CONFIG = {
       all: {
         label: "All-Time",
@@ -1415,6 +1418,9 @@
       readContract: null,
       browserProvider: null,
       walletProvider: null,
+      walletConnectProvider: null,
+      walletConnectModal: null,
+      walletSource: "none",
       walletListenerProvider: null,
       walletAccountsChangedHandler: null,
       walletChainChangedHandler: null,
@@ -1494,6 +1500,106 @@
       ]);
     }
 
+    function hasConfiguredReownProjectId() {
+      return typeof REOWN_PROJECT_ID === "string" &&
+        REOWN_PROJECT_ID.trim() !== "" &&
+        REOWN_PROJECT_ID !== "REPLACE_WITH_REOWN_PROJECT_ID";
+    }
+
+    function isUsableEip1193Provider(provider) {
+      return Boolean(provider && typeof provider.request === "function");
+    }
+
+    function getProviderSourceLabel(source) {
+      if (source === "miniapp") return "Farcaster Mini App";
+      if (source === "injected") return "Browser Wallet";
+      if (source === "walletconnect") return "WalletConnect";
+      return "Unknown";
+    }
+
+    function isLikelySafariBrowser() {
+      const userAgent = navigator.userAgent || "";
+      return /Safari/i.test(userAgent) && !/Chrome|CriOS|Chromium|Android|FxiOS|EdgiOS/i.test(userAgent);
+    }
+
+    function getWalletMissingMessage(source, hostedMiniApp) {
+      if (source === "walletconnect_unconfigured") {
+        return REOWN_REQUIRED_MESSAGE;
+      }
+
+      if (hostedMiniApp || state.isMiniApp) {
+        return "This mobile client did not expose a usable Ethereum wallet provider to the Mini App. If you are testing inside Base App or another in-app browser, try opening the Mini App in Warpcast. If you are already in Warpcast, update the app and test again.";
+      }
+
+      if (isLikelySafariBrowser()) {
+        return hasConfiguredReownProjectId()
+          ? "No injected wallet was detected in iPhone Safari, so the app is ready to use the WalletConnect / Reown fallback. If nothing opens, confirm that the WalletConnect bundle can load and that your mobile wallet supports WalletConnect."
+          : "No injected wallet was detected in iPhone Safari. Replace the placeholder REOWN_PROJECT_ID in index.html to activate the WalletConnect / Reown fallback.";
+      }
+
+      return hasConfiguredReownProjectId()
+        ? "No injected wallet was detected in this browser. The app will fall back to WalletConnect / Reown where that flow is supported."
+        : "No injected wallet was detected in this browser. On iPhone Safari, activate the WalletConnect / Reown fallback by replacing the placeholder REOWN_PROJECT_ID in index.html.";
+    }
+
+    function getWalletLoaderErrorMessage(error) {
+      const raw = String(error?.message || error || "").trim();
+      if (raw.includes("Failed to load https://unpkg.com/@walletconnect/ethereum-provider")) {
+        return "The WalletConnect / Reown browser bundle could not be loaded. Check access to the WalletConnect CDN or self-host the bundle before testing Safari again.";
+      }
+      if (raw.includes("did not expose EthereumProvider")) {
+        return "The WalletConnect bundle loaded, but it did not expose a usable Ethereum provider.";
+      }
+      return raw
+        ? `WalletConnect initialization failed: ${raw}`
+        : "WalletConnect initialization failed before the connection flow could start.";
+    }
+
+    function resetWalletConnectionState() {
+      state.walletSource = "none";
+      state.walletAddress = null;
+      state.walletProvider = null;
+      state.browserProvider = null;
+      state.signer = null;
+      state.writeContract = null;
+      state.bestOnChainScore = 0;
+      state.currentChainId = null;
+      elements.walletStatusValue.textContent = "Not connected";
+      elements.connectHeroButton.textContent = "Connect Wallet";
+      elements.connectSidebarButton.textContent = "Connect Wallet";
+      elements.connectHeroButton.disabled = false;
+      elements.connectSidebarButton.disabled = false;
+      updateScoreUI();
+      updateNetworkBadge();
+      updateSubmissionState();
+    }
+
+    function loadScriptOnce(src) {
+      return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[data-src="${src}"]`);
+        if (existing) {
+          if (existing.dataset.loaded === "true") {
+            resolve();
+            return;
+          }
+          existing.addEventListener("load", () => resolve(), { once: true });
+          existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), { once: true });
+          return;
+        }
+
+        const script = document.createElement("script");
+        script.src = src;
+        script.async = true;
+        script.dataset.src = src;
+        script.addEventListener("load", () => {
+          script.dataset.loaded = "true";
+          resolve();
+        }, { once: true });
+        script.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), { once: true });
+        document.head.appendChild(script);
+      });
+    }
+
     function pickInjectedEthereumProvider() {
       if (window.coinbaseWalletExtension && typeof window.coinbaseWalletExtension.request === "function") {
         return window.coinbaseWalletExtension;
@@ -1535,6 +1641,51 @@
       return Boolean(state.isMiniApp);
     }
 
+    async function loadWalletConnectProvider() {
+      if (!hasConfiguredReownProjectId()) {
+        return null;
+      }
+
+      if (state.walletConnectProvider) {
+        return state.walletConnectProvider;
+      }
+
+      const scriptUrl = "https://unpkg.com/@walletconnect/ethereum-provider@2.17.3/dist/index.umd.js";
+      await loadScriptOnce(scriptUrl);
+
+      const EthereumProviderFactory =
+        window?.WalletConnectEthereumProvider?.EthereumProvider ||
+        window?.WalletConnectEthereumProvider ||
+        window?.EthereumProvider ||
+        null;
+
+      if (!EthereumProviderFactory || typeof EthereumProviderFactory.init !== "function") {
+        throw new Error("WalletConnect provider bundle did not expose EthereumProvider.");
+      }
+
+      const provider = await EthereumProviderFactory.init({
+        projectId: REOWN_PROJECT_ID,
+        chains: [CHAIN_CONFIG.chainIdDecimal],
+        optionalChains: [CHAIN_CONFIG.chainIdDecimal],
+        showQrModal: true,
+        methods: [
+          "eth_requestAccounts",
+          "eth_accounts",
+          "eth_chainId",
+          "wallet_switchEthereumChain",
+          "wallet_addEthereumChain",
+          "eth_sendTransaction",
+          "personal_sign"
+        ],
+        rpcMap: {
+          [CHAIN_CONFIG.chainIdDecimal]: CHAIN_CONFIG.rpcUrls[0]
+        }
+      });
+
+      state.walletConnectProvider = provider;
+      return provider;
+    }
+
     async function getMiniAppEthereumProvider() {
       const hasMiniAppHost = await detectMiniAppHost();
       if (!hasMiniAppHost) {
@@ -1556,14 +1707,33 @@
     }
 
     async function getActiveEthereumProvider() {
-      return await getMiniAppEthereumProvider() || pickInjectedEthereumProvider();
+      const miniAppProvider = await getMiniAppEthereumProvider();
+      if (isUsableEip1193Provider(miniAppProvider)) {
+        return { provider: miniAppProvider, source: "miniapp" };
+      }
+
+      const injectedProvider = pickInjectedEthereumProvider();
+      if (isUsableEip1193Provider(injectedProvider)) {
+        return { provider: injectedProvider, source: "injected" };
+      }
+
+      try {
+        const walletConnectProvider = await loadWalletConnectProvider();
+        if (isUsableEip1193Provider(walletConnectProvider)) {
+          return { provider: walletConnectProvider, source: "walletconnect" };
+        }
+      } catch (error) {
+        return { provider: null, source: "walletconnect_error", error };
+      }
+
+      return { provider: null, source: hasConfiguredReownProjectId() ? "none" : "walletconnect_unconfigured" };
     }
 
     async function waitForActiveEthereumProvider(maxAttempts = 6, delayMs = 350) {
       for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-        const provider = await getActiveEthereumProvider();
-        if (provider) {
-          return provider;
+        const result = await getActiveEthereumProvider();
+        if (result.provider || result.source === "walletconnect_unconfigured" || result.source === "walletconnect_error") {
+          return result;
         }
 
         if (attempt < maxAttempts - 1) {
@@ -1571,7 +1741,7 @@
         }
       }
 
-      return null;
+      return { provider: null, source: hasConfiguredReownProjectId() ? "none" : "walletconnect_unconfigured" };
     }
 
     function buildBoardBackground() {
@@ -2412,18 +2582,19 @@
     }
 
     async function connectWallet() {
-      const provider = await waitForActiveEthereumProvider();
+      const { provider, source, error: providerError } = await waitForActiveEthereumProvider();
       const hostedMiniApp = await detectMiniAppHost();
 
       if (!provider) {
-        const missingMessage = hostedMiniApp || state.isMiniApp
-          ? "This mobile client did not expose a usable Ethereum wallet provider to the Mini App. If you are testing inside Base App or another in-app browser, try opening the Mini App in Warpcast. If you are already in Warpcast, update the app and test again."
-          : "Install a compatible wallet such as MetaMask to connect and submit scores.";
+        const missingMessage = source === "walletconnect_error"
+          ? getWalletLoaderErrorMessage(providerError)
+          : getWalletMissingMessage(source, hostedMiniApp);
         setStatus("danger", "Wallet Missing", missingMessage);
         return;
       }
 
       try {
+        state.walletSource = source;
         setStatus("success", "Connecting", "Approve the wallet connection request to continue.");
         let accounts = [];
         try {
@@ -2462,10 +2633,18 @@
 
         updateNetworkBadge();
         await refreshPlayerBest();
-        setStatus("success", "Wallet Connected", "The wallet is connected on Base Mainnet and ready for score submission.");
+        setStatus(
+          "success",
+          "Wallet Connected",
+          `The wallet is connected on Base Mainnet via ${getProviderSourceLabel(state.walletSource)} and is ready for score submission.`
+        );
       } catch (error) {
+        if (source === "walletconnect") {
+          await disconnectWalletConnectSession();
+        }
+        resetWalletConnectionState();
         const message = getReadableError(error);
-        setStatus("danger", "Wallet Connection Failed", message);
+        setStatus("danger", source === "walletconnect" ? "WalletConnect Failed" : "Wallet Connection Failed", message);
       }
     }
 
@@ -2479,6 +2658,15 @@
 
       if (raw.includes("user rejected") || raw.includes("User denied")) {
         return "The wallet request was rejected. Local play is still available.";
+      }
+      if (raw.includes("No wallet account is available")) {
+        return "The wallet connection completed without exposing an account. Try opening the request again from your wallet app.";
+      }
+      if (raw.includes("Connection request reset")) {
+        return "The wallet connection request was cancelled before an account was selected.";
+      }
+      if (raw.includes("Disconnected")) {
+        return "The wallet session ended before the connection completed.";
       }
       if (raw.includes("ScoreNotImproved")) {
         return "This score does not improve your saved on-chain best.";
@@ -2651,6 +2839,20 @@
       }
     }
 
+    async function disconnectWalletConnectSession() {
+      if (!state.walletConnectProvider || typeof state.walletConnectProvider.disconnect !== "function") {
+        return;
+      }
+
+      try {
+        await state.walletConnectProvider.disconnect();
+      } catch (error) {
+        // Ignore disconnect cleanup errors.
+      } finally {
+        state.walletConnectProvider = null;
+      }
+    }
+
     function detachWalletListeners() {
       const provider = state.walletListenerProvider;
       if (!provider || typeof provider.removeListener !== "function") return;
@@ -2675,21 +2877,10 @@
 
       state.walletAccountsChangedHandler = async (accounts) => {
         if (!accounts.length) {
-          state.walletAddress = null;
-          state.walletProvider = null;
-          state.browserProvider = null;
-          state.signer = null;
-          state.writeContract = null;
-          state.bestOnChainScore = 0;
-          state.currentChainId = null;
-          elements.walletStatusValue.textContent = "Not connected";
-          elements.connectHeroButton.textContent = "Connect Wallet";
-          elements.connectSidebarButton.textContent = "Connect Wallet";
-          elements.connectHeroButton.disabled = false;
-          elements.connectSidebarButton.disabled = false;
-          updateScoreUI();
-          updateNetworkBadge();
-          updateSubmissionState();
+          if (state.walletSource === "walletconnect") {
+            await disconnectWalletConnectSession();
+          }
+          resetWalletConnectionState();
           setStatus("danger", "Wallet Disconnected", "The wallet session ended. Local play remains active.");
           return;
         }
