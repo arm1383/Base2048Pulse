@@ -267,11 +267,11 @@
 
     .game-over-overlay {
       position: absolute;
-      inset: var(--board-gap);
+      inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 22px;
+      border-radius: inherit;
       background: rgba(7, 17, 31, 0.78);
       backdrop-filter: blur(10px);
       opacity: 0;
@@ -293,6 +293,14 @@
       padding: 24px;
     }
 
+    .game-over-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
     .game-over-title {
       font-family: "Oxanium", sans-serif;
       font-size: clamp(40px, 8vw, 68px);
@@ -308,6 +316,13 @@
       color: #f8dbe4;
       font-size: 14px;
       line-height: 1.7;
+    }
+
+    .button-success {
+      background: linear-gradient(135deg, #14c784 0%, #33e0a1 100%);
+      color: #042218;
+      border: none;
+      box-shadow: 0 14px 30px rgba(20, 199, 132, 0.24);
     }
 
     .board-bg {
@@ -1003,7 +1018,7 @@
       }
     }
   </style>
-<script data-preview-injected src="https://lf3-static.bytednsdoc.com/obj/eden-cn/8011eh7nupenuvonuhd/previewer-tools.de3cd6a1.umd.js"></script></head>
+</head>
 <body>
   <div class="app-shell">
     <section class="hero panel">
@@ -1071,7 +1086,10 @@
               <div class="game-over-modal">
                 <div class="game-over-title">Game Over</div>
                 <div class="game-over-subtitle">Your run has ended. Submit your score on Base or start a fresh board.</div>
-                <button id="overlayTryAgainButton" class="button try-again-button" type="button">Try Again</button>
+                <div class="game-over-actions">
+                  <button id="overlaySubmitButton" class="button button-primary" type="button">Submit Score</button>
+                  <button id="overlayTryAgainButton" class="button button-success" type="button">Try Again</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1291,15 +1309,17 @@
     const CONTRACT_INTERFACE = new ethers.Interface(CONTRACT_ABI);
     const SCORE_SUBMITTED_TOPIC = ethers.id("ScoreSubmitted(address,uint256,uint256,uint256)");
     const APP_URL = "https://base2048pulse.vercel.app/";
-    const BASENAMES_REGISTRY_ADDRESS = "0xb94704422c2a1e396835a571837aa5ae53285a95";
-    const BASENAMES_REVERSE_REGISTRAR_ADDRESS = "0x79ea96012eea67a83431f1701b3dff7e37f9e282";
-    const BASENAMES_REGISTRY_ABI = [
+    const ENS_MAINNET_RPC_URLS = [
+      "https://ethereum-rpc.publicnode.com",
+      "https://cloudflare-eth.com",
+      "https://eth.llamarpc.com"
+    ];
+    const ENS_MAINNET_REGISTRY_ADDRESS = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e";
+    const BASE_ENSIP19_REVERSE_NAMESPACE = "80002105.reverse";
+    const ENS_REGISTRY_ABI = [
       "function resolver(bytes32 node) view returns (address)"
     ];
-    const BASENAMES_REVERSE_REGISTRAR_ABI = [
-      "function node(address addr) view returns (bytes32)"
-    ];
-    const BASENAMES_NAME_RESOLVER_ABI = [
+    const ENS_NAME_RESOLVER_ABI = [
       "function name(bytes32 node) view returns (string)"
     ];
     const LEADERBOARD_CONFIG = {
@@ -1355,8 +1375,8 @@
       allSubmissionsCache: null,
       basenameCache: new Map(),
       basenamePending: new Map(),
-      basenamesRegistry: null,
-      basenamesReverseRegistrar: null
+      ensMainnetProvider: null,
+      ensRegistry: null
     };
 
     const elements = {};
@@ -1367,6 +1387,7 @@
         tileLayer: document.getElementById("tileLayer"),
         boardFrame: document.getElementById("boardFrame"),
         gameOverOverlay: document.getElementById("gameOverOverlay"),
+        overlaySubmitButton: document.getElementById("overlaySubmitButton"),
         overlayTryAgainButton: document.getElementById("overlayTryAgainButton"),
         scoreValue: document.getElementById("scoreValue"),
         bestLocalValue: document.getElementById("bestLocalValue"),
@@ -1556,11 +1577,30 @@
       throw new Error("Unable to reach any Base RPC endpoint.");
     }
 
+    async function createEnsMainnetProvider() {
+      for (const rpcUrl of ENS_MAINNET_RPC_URLS) {
+        try {
+          const provider = new ethers.JsonRpcProvider(rpcUrl, 1);
+          await provider.getBlockNumber();
+          return provider;
+        } catch (error) {
+          continue;
+        }
+      }
+      throw new Error("Unable to reach any Ethereum mainnet RPC endpoint.");
+    }
+
     async function initializeContracts() {
       state.readProvider = await createReadProvider();
       state.readContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.readProvider);
-      state.basenamesRegistry = new ethers.Contract(BASENAMES_REGISTRY_ADDRESS, BASENAMES_REGISTRY_ABI, state.readProvider);
-      state.basenamesReverseRegistrar = new ethers.Contract(BASENAMES_REVERSE_REGISTRAR_ADDRESS, BASENAMES_REVERSE_REGISTRAR_ABI, state.readProvider);
+
+      try {
+        state.ensMainnetProvider = await createEnsMainnetProvider();
+        state.ensRegistry = new ethers.Contract(ENS_MAINNET_REGISTRY_ADDRESS, ENS_REGISTRY_ABI, state.ensMainnetProvider);
+      } catch (error) {
+        state.ensMainnetProvider = null;
+        state.ensRegistry = null;
+      }
 
       if (state.signer) {
         state.writeContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.signer);
@@ -1743,6 +1783,7 @@
             ? "2048 reached. You can keep pushing for a higher final score."
             : "Keep the chain alive and look for the next merge."
         );
+        syncGameOverOverlay();
         return;
       }
 
@@ -1751,10 +1792,12 @@
           const value = state.board[row * 4 + col];
           if (col < 3 && value === state.board[row * 4 + col + 1]) {
             state.hasEnded = false;
+            syncGameOverOverlay();
             return;
           }
           if (row < 3 && value === state.board[(row + 1) * 4 + col]) {
             state.hasEnded = false;
+            syncGameOverOverlay();
             return;
           }
         }
@@ -1839,12 +1882,14 @@
 
       const ready = canSubmitScore();
       elements.submitButton.disabled = !ready || state.txState === "pending" || state.txState === "awaiting_signature";
+      elements.overlaySubmitButton.disabled = elements.submitButton.disabled;
       elements.submitHint.textContent = reasons[0];
       elements.submitButton.textContent = state.txState === "awaiting_signature"
         ? "Awaiting Signature"
         : state.txState === "pending"
           ? "Submitting..."
           : "Submit Score";
+      elements.overlaySubmitButton.textContent = elements.submitButton.textContent;
     }
 
     function formatTimestamp(value) {
@@ -1917,15 +1962,16 @@
         let preferred = shortenAddress(address);
 
         try {
-          if (!state.basenamesReverseRegistrar || !state.basenamesRegistry) {
-            throw new Error("Basenames contracts are not initialized.");
+          if (!state.ensRegistry || !state.ensMainnetProvider) {
+            throw new Error("ENS mainnet contracts are not initialized.");
           }
 
-          const reverseNode = await state.basenamesReverseRegistrar.node(address);
-          const resolverAddress = await state.basenamesRegistry.resolver(reverseNode);
+          const reverseName = `${address.toLowerCase().slice(2)}.${BASE_ENSIP19_REVERSE_NAMESPACE}`;
+          const reverseNode = ethers.namehash(reverseName);
+          const resolverAddress = await state.ensRegistry.resolver(reverseNode);
 
           if (resolverAddress && resolverAddress !== ZERO_ADDRESS) {
-            const resolver = new ethers.Contract(resolverAddress, BASENAMES_NAME_RESOLVER_ABI, state.readProvider);
+            const resolver = new ethers.Contract(resolverAddress, ENS_NAME_RESOLVER_ABI, state.ensMainnetProvider);
             const resolvedName = await resolver.name(reverseNode);
             preferred = getPreferredLeaderboardLabel(address, resolvedName);
           }
@@ -2441,6 +2487,7 @@
       elements.refreshLeaderboardButton.addEventListener("click", () => refreshLeaderboard(true));
       elements.copyContractButton.addEventListener("click", copyContractAddress);
       elements.newGameButton.addEventListener("click", resetGame);
+      elements.overlaySubmitButton.addEventListener("click", submitScore);
       elements.overlayTryAgainButton.addEventListener("click", resetGame);
       elements.undoButton.addEventListener("click", undoMove);
       elements.submitButton.addEventListener("click", submitScore);
