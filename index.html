@@ -113,7 +113,7 @@
     .hero {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: stretch;
       gap: 16px;
       padding: 28px;
       border: 1px solid var(--line);
@@ -125,6 +125,35 @@
 
     .hero-copy {
       max-width: 700px;
+    }
+
+    .hero-side {
+      min-width: min(100%, 340px);
+      display: grid;
+      gap: 14px;
+      align-content: start;
+      justify-items: stretch;
+    }
+
+    .hero-side .network-badge {
+      justify-self: end;
+    }
+
+    .hero-contract-card {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at top right, rgba(89, 216, 255, 0.12), transparent 35%),
+        rgba(255, 255, 255, 0.03);
+    }
+
+    .hero-contract-card .section-title {
+      margin-bottom: 14px;
+    }
+
+    .hero-contract-card .section-title p {
+      max-width: none;
     }
 
     .eyebrow {
@@ -172,7 +201,7 @@
       display: grid;
       grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
       gap: 20px;
-      align-items: start;
+      align-items: stretch;
     }
 
     .panel {
@@ -190,6 +219,7 @@
     .sidebar {
       display: grid;
       gap: 20px;
+      grid-template-rows: auto minmax(0, 1fr);
     }
 
     .top-row {
@@ -536,8 +566,7 @@
 
     .wallet-card,
     .security-card,
-    .leaderboard-card,
-    .contract-card {
+    .leaderboard-card {
       padding: 20px;
     }
 
@@ -604,6 +633,8 @@
       margin: 0;
       display: grid;
       gap: 10px;
+      flex: 1 1 auto;
+      align-content: start;
     }
 
     .leaderboard-item {
@@ -791,9 +822,17 @@
       line-height: 1.6;
     }
 
+    .leaderboard-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
     .security-card {
       position: relative;
       overflow: hidden;
+      width: min(860px, 100%);
+      justify-self: center;
       background:
         radial-gradient(circle at top right, rgba(45, 212, 191, 0.12), transparent 33%),
         radial-gradient(circle at bottom left, rgba(255, 214, 10, 0.08), transparent 30%),
@@ -884,7 +923,9 @@
     .footer-note {
       color: var(--muted);
       text-align: center;
-      font-size: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.7;
       padding: 4px 12px 22px;
     }
 
@@ -953,6 +994,14 @@
         flex-direction: column;
       }
 
+      .hero-side {
+        min-width: 0;
+      }
+
+      .hero-side .network-badge {
+        justify-self: start;
+      }
+
       .top-row {
         flex-direction: column;
         align-items: flex-start;
@@ -973,7 +1022,6 @@
       .wallet-card,
       .leaderboard-card,
       .security-card,
-      .contract-card,
       .status-card {
         padding: 18px;
         border-radius: 22px;
@@ -1056,9 +1104,33 @@
           </a>
         </div>
       </div>
-      <div class="network-badge" id="networkBadge">
-        <span class="dot" id="networkDot"></span>
-        <span id="networkBadgeText">Read-only Mode</span>
+      <div class="hero-side">
+        <div class="network-badge" id="networkBadge">
+          <span class="dot" id="networkDot"></span>
+          <span id="networkBadgeText">Read-only Mode</span>
+        </div>
+        <section class="hero-contract-card">
+          <div class="section-title">
+            <div>
+              <h3>Contract</h3>
+              <p>This build is locked to the live Base Mainnet score contract.</p>
+            </div>
+          </div>
+          <div class="meta-grid">
+            <div class="mini">
+              <div class="mini-label">Contract Address</div>
+              <div class="mini-value" id="savedContractValue">Locked at build time</div>
+            </div>
+            <div class="mini">
+              <div class="mini-label">Network</div>
+              <div class="mini-value" id="chainLabelValue">Base Mainnet (8453)</div>
+            </div>
+          </div>
+          <div class="link-row">
+            <button id="copyContractButton" class="link-button" type="button">Copy Address</button>
+            <a id="contractExplorerLink" class="link-button" href="https://basescan.org/" target="_blank" rel="noreferrer">Open BaseScan</a>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -1186,76 +1258,51 @@
           </ul>
         </section>
 
-        <section class="panel contract-card">
-          <div class="section-title">
-            <div>
-              <h3>Contract</h3>
-              <p>This deployment is locked to a single Base Mainnet score contract.</p>
-            </div>
-          </div>
-
-          <div class="link-row">
-            <button id="copyContractButton" class="link-button" type="button">Copy Address</button>
-            <a id="contractExplorerLink" class="link-button" href="https://basescan.org/" target="_blank" rel="noreferrer">Open BaseScan</a>
-            <a class="link-button" href="https://remix.ethereum.org/" target="_blank" rel="noreferrer">Open Remix</a>
-          </div>
-
-          <div class="meta-grid" style="margin-top: 14px;">
-            <div class="mini">
-              <div class="mini-label">Contract Address</div>
-              <div class="mini-value" id="savedContractValue">Locked at build time</div>
-            </div>
-            <div class="mini">
-              <div class="mini-label">Network</div>
-              <div class="mini-value" id="chainLabelValue">Base Mainnet (8453)</div>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel security-card">
-          <div class="section-title">
-            <div>
-              <h3>Safety Notes</h3>
-              <p>This build is tuned for clear trust signals, low wallet risk, and predictable on-chain behavior.</p>
-            </div>
-            <div class="tiny-badge safety-badge">🛡️ Trust Layer</div>
-          </div>
-          <div class="security-grid">
-            <div class="security-item">
-              <div class="security-icon">🔐</div>
-              <div class="security-copy">
-                <strong>Score Storage Only</strong>
-                <p>The smart contract is designed for score tracking and should not custody user funds.</p>
-              </div>
-            </div>
-            <div class="security-item">
-              <div class="security-icon">🚫</div>
-              <div class="security-copy">
-                <strong>No Approvals</strong>
-                <p>The frontend does not ask for token approvals, permit signatures, or asset transfer permissions.</p>
-              </div>
-            </div>
-            <div class="security-item">
-              <div class="security-icon">🧭</div>
-              <div class="security-copy">
-                <strong>Base Mainnet Guardrails</strong>
-                <p>If the wallet is on the wrong network, the app attempts a normal Base Mainnet switch or add-chain flow.</p>
-              </div>
-            </div>
-            <div class="security-item">
-              <div class="security-icon">📣</div>
-              <div class="security-copy">
-                <strong>Farcaster Mini App Ready</strong>
-                <p>The site now includes Mini App embed metadata, runtime SDK readiness, and manifest support for Farcaster publishing.</p>
-              </div>
-            </div>
-          </div>
-        </section>
       </aside>
     </div>
 
+    <section class="panel security-card">
+      <div class="section-title">
+        <div>
+          <h3>Safety Notes</h3>
+          <p>This build is tuned for clear trust signals, low wallet risk, and predictable on-chain behavior.</p>
+        </div>
+        <div class="tiny-badge safety-badge">🛡️ Trust Layer</div>
+      </div>
+      <div class="security-grid">
+        <div class="security-item">
+          <div class="security-icon">🔐</div>
+          <div class="security-copy">
+            <strong>Score Storage Only</strong>
+            <p>The smart contract is designed for score tracking and should not custody user funds.</p>
+          </div>
+        </div>
+        <div class="security-item">
+          <div class="security-icon">🚫</div>
+          <div class="security-copy">
+            <strong>No Approvals</strong>
+            <p>The frontend does not ask for token approvals, permit signatures, or asset transfer permissions.</p>
+          </div>
+        </div>
+        <div class="security-item">
+          <div class="security-icon">🧭</div>
+          <div class="security-copy">
+            <strong>Base Mainnet Guardrails</strong>
+            <p>If the wallet is on the wrong network, the app attempts a normal Base Mainnet switch or add-chain flow.</p>
+          </div>
+        </div>
+        <div class="security-item">
+          <div class="security-icon">📣</div>
+          <div class="security-copy">
+            <strong>Farcaster Mini App Live</strong>
+            <p>The site now includes live Mini App metadata, signed manifest support, and production preview assets for Farcaster publishing.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <div class="footer-note">
-      This build is locked to the deployed Base Mainnet contract, supports shareable score runs, and is prepared for Vercel + Farcaster Mini App publishing.
+      This build is locked to the deployed Base Mainnet contract, supports shareable score runs, and is fully deployed for Vercel and Farcaster Mini App publishing.
     </div>
   </div>
 
@@ -1269,10 +1316,10 @@
         <button id="closeHelpButton" class="button button-ghost" type="button">Close</button>
       </div>
       <ol>
-        <li>Play locally until the board reaches a game-over state.</li>
+        <li>Play locally and keep moving as long as you want.</li>
         <li>Connect your wallet only when you are ready to submit a valid final score.</li>
         <li>Switch to Base Mainnet if prompted by your wallet.</li>
-        <li>Submit only if your new score is higher than your previously stored on-chain score.</li>
+        <li>You can submit your current score at any point in a run, even before game over.</li>
         <li>Refresh the leaderboard after confirmation to see the updated ranking.</li>
       </ol>
     </div>
