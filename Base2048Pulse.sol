@@ -4,8 +4,6 @@ pragma solidity ^0.8.24;
 contract Base2048Pulse {
     error NotOwner();
     error GamePaused();
-    error ScoreTooLow();
-    error ScoreNotImproved();
     error InvalidAddress();
     error InvalidIndex();
     error NoDirectPayments();
@@ -14,6 +12,13 @@ contract Base2048Pulse {
         address player;
         uint256 score;
         uint256 updatedAt;
+    }
+
+    struct ScoreSubmission {
+        uint256 submissionId;
+        address player;
+        uint256 score;
+        uint256 timestamp;
     }
 
     uint256 public constant MAX_TOP_ENTRIES = 10;
@@ -26,9 +31,12 @@ contract Base2048Pulse {
 
     mapping(address => uint256) public playerBestScore;
     mapping(address => uint256) public playerLastPlayedAt;
+    mapping(address => uint256) public playerSubmissionCount;
 
     ScoreEntry[MAX_TOP_ENTRIES] private topEntries;
     uint256 private topEntryCount;
+    ScoreSubmission[] private submissions;
+    mapping(address => uint256[]) private playerSubmissionIds;
 
     event ScoreSubmitted(address indexed player, uint256 score, uint256 previousBest, uint256 timestamp);
     event PauseStatusChanged(bool isPaused);
@@ -39,9 +47,9 @@ contract Base2048Pulse {
         _;
     }
 
-    constructor(uint256 initialMinimumSubmitScore) {
+    constructor() {
         owner = msg.sender;
-        minimumSubmitScore = initialMinimumSubmitScore;
+        minimumSubmitScore = 0;
         emit OwnershipTransferred(address(0), msg.sender);
     }
 
@@ -55,18 +63,29 @@ contract Base2048Pulse {
 
     function submitScore(uint256 score) external {
         if (paused) revert GamePaused();
-        if (score < minimumSubmitScore) revert ScoreTooLow();
-
-        uint256 previousBest = playerBestScore[msg.sender];
-        if (score <= previousBest) revert ScoreNotImproved();
-
-        if (previousBest == 0) {
+        if (playerSubmissionCount[msg.sender] == 0) {
             totalUniquePlayers += 1;
         }
 
-        playerBestScore[msg.sender] = score;
+        uint256 previousBest = playerBestScore[msg.sender];
+        if (score > previousBest) {
+            playerBestScore[msg.sender] = score;
+        }
+
         playerLastPlayedAt[msg.sender] = block.timestamp;
+        playerSubmissionCount[msg.sender] += 1;
         totalAcceptedSubmissions += 1;
+
+        uint256 submissionId = submissions.length;
+        submissions.push(
+            ScoreSubmission({
+                submissionId: submissionId,
+                player: msg.sender,
+                score: score,
+                timestamp: block.timestamp
+            })
+        );
+        playerSubmissionIds[msg.sender].push(submissionId);
 
         _updateLeaderboard(msg.sender, score, block.timestamp);
 
@@ -105,29 +124,40 @@ contract Base2048Pulse {
         return playerBestScore[player];
     }
 
+    function getSubmissionCount() external view returns (uint256) {
+        return submissions.length;
+    }
+
+    function getSubmission(uint256 index) external view returns (ScoreSubmission memory) {
+        if (index >= submissions.length) revert InvalidIndex();
+        return submissions[index];
+    }
+
+    function getSubmissions(uint256 start, uint256 limit) external view returns (ScoreSubmission[] memory page) {
+        if (start >= submissions.length) {
+            return new ScoreSubmission[](0);
+        }
+
+        uint256 endExclusive = start + limit;
+        if (endExclusive > submissions.length) {
+            endExclusive = submissions.length;
+        }
+
+        uint256 pageLength = endExclusive - start;
+        page = new ScoreSubmission[](pageLength);
+        for (uint256 i = 0; i < pageLength; i++) {
+            page[i] = submissions[start + i];
+        }
+    }
+
+    function getPlayerSubmissionIds(address player) external view returns (uint256[] memory) {
+        return playerSubmissionIds[player];
+    }
+
     function _updateLeaderboard(address player, uint256 score, uint256 updatedAt) internal {
-        bool found;
-        uint256 existingIndex;
-
-        for (uint256 i = 0; i < topEntryCount; i++) {
-            if (topEntries[i].player == player) {
-                found = true;
-                existingIndex = i;
-                break;
-            }
-        }
-
-        if (found) {
-            for (uint256 i = existingIndex; i + 1 < topEntryCount; i++) {
-                topEntries[i] = topEntries[i + 1];
-            }
-            delete topEntries[topEntryCount - 1];
-            topEntryCount -= 1;
-        }
-
         uint256 insertIndex = topEntryCount;
         for (uint256 i = 0; i < topEntryCount; i++) {
-            if (score > topEntries[i].score) {
+            if (score > topEntries[i].score || (score == topEntries[i].score && updatedAt > topEntries[i].updatedAt)) {
                 insertIndex = i;
                 break;
             }
