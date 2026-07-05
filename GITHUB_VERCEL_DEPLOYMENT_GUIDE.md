@@ -110,7 +110,7 @@ Recommended settings:
 - Output Directory: leave empty
 - Install Command: leave empty
 
-This repository already includes a live Reown / WalletConnect project ID for iPhone Safari. If you rotate that ID or deploy a fork, update `REOWN_PROJECT_ID` inside `index.html` before deploying.
+This repository already includes a live Reown / WalletConnect project ID for non-Safari fallback paths. On iPhone Safari, the frontend now prefers opening the dapp inside a wallet app browser through official deep links. If you rotate the Reown project or deploy a fork, update `REOWN_PROJECT_ID` inside `index.html` before deploying.
 
 Optional environment variable:
 
@@ -140,7 +140,8 @@ After deployment:
 14. Start a run and submit a score at any point if you are testing the V2 contract flow
 15. Refresh the leaderboard
 16. If desired, continue until `Game Over` and test the end-state UI as well
-17. Confirm `Connect Wallet` opens the WalletConnect / Reown path in iPhone Safari once the Reown project ID is configured
+17. Confirm `Connect Wallet` opens the wallet-selection modal in iPhone Safari
+18. Confirm at least one wallet app deep link opens the game inside that wallet browser and that `Connect Wallet` works there
 
 If you also want to publish the app as a Farcaster Mini App, continue with:
 
@@ -164,7 +165,7 @@ Before sharing the live URL publicly, confirm these points:
 - The live site points to the intended V2 production contract address
 - The live Farcaster manifest points to the correct production domain
 - The preview image and icon are served from your own deployed `assets/` folder
-- If Safari support matters, confirm the live frontend still contains the intended `REOWN_PROJECT_ID`
+- If Safari support matters, confirm the live frontend still contains the intended `REOWN_PROJECT_ID` and the wallet-selection modal opens on iPhone Safari
 
 ## 9. How to Update the Site Later
 
@@ -194,7 +195,7 @@ DEFAULT_CONTRACT_ADDRESS
 
 Then replace the old contract address with the new one, commit, push, and let Vercel redeploy.
 
-If you also want Safari on iPhone to keep connecting wallets directly from the public site after future changes, update the `REOWN_PROJECT_ID` value in that same file before pushing the next deployment whenever you rotate or replace the Reown project.
+If you also want Safari on iPhone to keep connecting wallets after future changes, preserve both pieces of the flow in `index.html`: the wallet-app deep links for Safari and the `REOWN_PROJECT_ID` value for non-Safari WalletConnect fallback paths.
 
 Current production address:
 
@@ -209,7 +210,7 @@ Current production address:
 - Vercel deployment succeeds
 - Live site loads without errors
 - Wallet connect works
-- iPhone Safari WalletConnect fallback works after configuring a real Reown project ID
+- iPhone Safari wallet-app deep-link flow works and opens the game inside a supported wallet browser
 - Base network switch works
 - On-chain score submission works
 - Leaderboard refresh works
