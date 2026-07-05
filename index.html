@@ -958,7 +958,7 @@
       }
     }
   </style>
-<script data-preview-injected src="https://lf3-static.bytednsdoc.com/obj/eden-cn/8011eh7nupenuvonuhd/previewer-tools.de3cd6a1.umd.js"></script></head>
+</head>
 <body>
   <div class="app-shell">
     <section class="hero panel">
@@ -1408,12 +1408,12 @@
     function getShareText() {
       const score = state.score || 0;
       if (state.hasEnded && score > 0) {
-        return `I just posted a ${score} score in Base2048Pulse on Base Mainnet. Play the on-chain 2048 run and see if you can beat it.`;
+        return `I just posted a ${score} score in Base2048Pulse on @base. Play the on-chain 2048 run and see if you can beat it.`;
       }
       if (score > 0) {
-        return `I am at ${score} points in Base2048Pulse on Base Mainnet. Jump in and try to top this run.`;
+        return `I am at ${score} points in Base2048Pulse on @base. Jump in and try to top this run.`;
       }
-      return "I am playing Base2048Pulse on Base Mainnet. Try the smooth on-chain 2048 experience and see how far you can go.";
+      return "I am playing Base2048Pulse on @base. Try the smooth on-chain 2048 experience and see how far you can go.";
     }
 
     function buildXShareUrl() {
@@ -2221,6 +2221,7 @@
     async function shareOnFarcaster() {
       const shareUrl = getAppUrl();
       const shareText = getShareText();
+      const fallbackUrl = buildFarcasterIntentUrl();
 
       try {
         if (state.isMiniApp && state.farcasterSdk?.actions?.composeCast) {
@@ -2235,7 +2236,12 @@
         // Fallback to Warpcast intent below.
       }
 
-      window.open(buildFarcasterIntentUrl(), "_blank", "noopener,noreferrer");
+      const popup = window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+      if (!popup || popup.closed || typeof popup.closed === "undefined") {
+        window.location.href = fallbackUrl;
+      } else {
+        setStatus("success", "Opened Farcaster Share", "Warpcast composer opened in a new tab.");
+      }
     }
 
     async function initializeMiniApp() {
