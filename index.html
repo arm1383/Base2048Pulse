@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Base 2048 Pulse</title>
   <meta name="description" content="A polished 2048 game with smooth touch controls, wallet connect, and on-chain score submission on Base Mainnet.">
+  <meta property="og:title" content="Base 2048 Pulse">
+  <meta property="og:description" content="A polished 2048 game on Base Mainnet with wallet connect, multi-range leaderboards, and shareable score runs.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=futuristic%20arcade%20cover%20art%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20glowing%20blue%20grid%2C%20premium%20dark%20interface%2C%20neon%20tiles%2C%20high%20contrast%2C%20clean%20game%20poster%2C%20no%20distorted%20text&image_size=landscape_4_3">
+  <meta name="fc:miniapp" content="{&quot;version&quot;:&quot;1&quot;,&quot;imageUrl&quot;:&quot;https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=futuristic%20arcade%20cover%20art%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20glowing%20blue%20grid%2C%20premium%20dark%20interface%2C%20neon%20tiles%2C%20high%20contrast%2C%20clean%20game%20poster%2C%20no%20distorted%20text&amp;image_size=landscape_4_3&quot;,&quot;button&quot;:{&quot;title&quot;:&quot;Play 2048 Pulse&quot;,&quot;action&quot;:{&quot;type&quot;:&quot;launch_miniapp&quot;,&quot;name&quot;:&quot;Base2048Pulse&quot;,&quot;splashImageUrl&quot;:&quot;https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=minimal%20glossy%20app%20icon%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20electric%20blue%20tile%2C%20premium%20dark%20background%2C%20clean%20icon%2C%20centered%20symbol%2C%20no%20text&amp;image_size=square_hd&quot;,&quot;splashBackgroundColor&quot;:&quot;#07111f&quot;}}}">
+  <meta name="fc:frame" content="{&quot;version&quot;:&quot;1&quot;,&quot;imageUrl&quot;:&quot;https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=futuristic%20arcade%20cover%20art%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20glowing%20blue%20grid%2C%20premium%20dark%20interface%2C%20neon%20tiles%2C%20high%20contrast%2C%20clean%20game%20poster%2C%20no%20distorted%20text&amp;image_size=landscape_4_3&quot;,&quot;button&quot;:{&quot;title&quot;:&quot;Play 2048 Pulse&quot;,&quot;action&quot;:{&quot;type&quot;:&quot;launch_frame&quot;,&quot;name&quot;:&quot;Base2048Pulse&quot;,&quot;splashImageUrl&quot;:&quot;https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=minimal%20glossy%20app%20icon%20for%20a%202048%20puzzle%20game%20on%20Base%20blockchain%2C%20electric%20blue%20tile%2C%20premium%20dark%20background%2C%20clean%20icon%2C%20centered%20symbol%2C%20no%20text&amp;image_size=square_hd&quot;,&quot;splashBackgroundColor&quot;:&quot;#07111f&quot;}}}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Oxanium:wght@500;700;800&display=swap" rel="stylesheet">
@@ -620,6 +626,165 @@
       font-weight: 700;
     }
 
+    .social-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+    }
+
+    .social-link:hover,
+    .social-link:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(89, 216, 255, 0.55);
+      background: rgba(89, 216, 255, 0.09);
+    }
+
+    .social-icon {
+      width: 18px;
+      height: 18px;
+      display: inline-block;
+      fill: currentColor;
+    }
+
+    .share-panel {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at top right, rgba(89, 216, 255, 0.12), transparent 35%),
+        rgba(255, 255, 255, 0.025);
+    }
+
+    .share-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .share-button {
+      justify-content: center;
+    }
+
+    .share-note {
+      margin: 0 0 14px;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 13px;
+    }
+
+    .leaderboard-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .leaderboard-tab {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--bg-soft);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+    }
+
+    .leaderboard-tab.active {
+      color: #041123;
+      background: linear-gradient(135deg, var(--accent-soft, #7ce3ff), #4da3ff);
+      border-color: transparent;
+    }
+
+    .leaderboard-caption {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .security-card {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top right, rgba(45, 212, 191, 0.12), transparent 33%),
+        radial-gradient(circle at bottom left, rgba(255, 214, 10, 0.08), transparent 30%),
+        var(--bg-panel);
+    }
+
+    .safety-badge {
+      color: #dffcf4;
+      background: rgba(45, 212, 191, 0.12);
+      border-color: rgba(45, 212, 191, 0.22);
+    }
+
+    .security-card .section-title h3,
+    .security-copy strong {
+      font-family: "Oxanium", sans-serif;
+      letter-spacing: -0.02em;
+    }
+
+    .security-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .security-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(8, 19, 36, 0.42);
+    }
+
+    .security-icon {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(45, 212, 191, 0.15);
+      font-size: 18px;
+      box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.18) inset;
+    }
+
+    .security-copy strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #ecfff8;
+      font-size: 14px;
+    }
+
+    .security-copy p {
+      margin: 0;
+      color: #b9d4cf;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
     .footer-note {
       color: var(--muted);
       text-align: center;
@@ -736,7 +901,8 @@
       }
 
       .controls .button,
-      .hero-actions .button {
+      .hero-actions .button,
+      .share-grid .button {
         width: 100%;
       }
 
@@ -747,6 +913,10 @@
       .leaderboard-score {
         grid-column: 2;
         justify-self: start;
+      }
+
+      .share-grid {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -774,6 +944,16 @@
           <button id="connectHeroButton" class="button button-primary" type="button">Connect Wallet</button>
           <button id="openHelpButton" class="button button-secondary" type="button">How To Play</button>
           <button id="themeToggleButton" class="button button-ghost" type="button">Toggle Theme</button>
+        </div>
+        <div class="social-strip">
+          <a class="social-link" href="https://x.com/amircrypto82" target="_blank" rel="noreferrer">
+            <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.901 1.154h3.68l-8.04 9.188 9.458 12.504h-7.406l-5.8-7.58-6.633 7.58H.48l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932Zm-1.292 19.488h2.039L6.486 3.24H4.298l13.311 17.402Z"/></svg>
+            <span>@amircrypto82</span>
+          </a>
+          <a class="social-link" href="https://github.com/arm1383/Base2048Pulse" target="_blank" rel="noreferrer">
+            <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12.08c0 5.14 3.3 9.49 7.88 11.03.58.11.79-.26.79-.57 0-.28-.01-1.21-.02-2.19-3.21.71-3.89-1.39-3.89-1.39-.52-1.35-1.28-1.7-1.28-1.7-1.05-.73.08-.71.08-.71 1.16.09 1.78 1.21 1.78 1.21 1.03 1.79 2.71 1.27 3.37.97.1-.76.4-1.27.73-1.56-2.56-.3-5.26-1.3-5.26-5.79 0-1.28.45-2.33 1.2-3.15-.12-.3-.52-1.52.11-3.18 0 0 .98-.32 3.2 1.2a10.94 10.94 0 0 1 5.82 0c2.21-1.52 3.19-1.2 3.19-1.2.63 1.66.23 2.88.11 3.18.75.82 1.2 1.87 1.2 3.15 0 4.5-2.7 5.49-5.28 5.78.41.36.78 1.06.78 2.14 0 1.55-.01 2.79-.01 3.17 0 .31.21.68.8.57A11.59 11.59 0 0 0 23.5 12.08C23.5 5.65 18.35.5 12 .5Z"/></svg>
+            <span>Project Repo</span>
+          </a>
         </div>
       </div>
       <div class="network-badge" id="networkBadge">
@@ -822,6 +1002,20 @@
           <div class="hint" id="gameStateText">Start moving to build your first chain.</div>
           <div class="tiny-badge" id="submitHint">Local play is always available.</div>
         </div>
+
+        <section class="share-panel">
+          <div class="section-title">
+            <div>
+              <h3>Share Your Run</h3>
+              <p>Broadcast your live score or final run on X and Farcaster.</p>
+            </div>
+          </div>
+          <p class="share-note">Share buttons stay local-browser friendly, and switch to native Farcaster compose flow when the app runs inside a Mini App host.</p>
+          <div class="share-grid">
+            <button id="shareXButton" class="button button-secondary share-button" type="button">Share on X</button>
+            <button id="shareFarcasterButton" class="button button-secondary share-button" type="button">Share on Farcaster</button>
+          </div>
+        </section>
       </section>
 
       <aside class="sidebar">
@@ -860,10 +1054,16 @@
           <div class="section-title">
             <div>
               <h3>Leaderboard</h3>
-              <p>Read directly from the deployed contract.</p>
+              <p>Switch between daily, weekly, and all-time views.</p>
             </div>
             <button id="refreshLeaderboardButton" class="button button-ghost" type="button">Refresh</button>
           </div>
+          <div class="leaderboard-tabs" role="tablist" aria-label="Leaderboard range">
+            <button class="leaderboard-tab active" type="button" data-range="all">All-Time</button>
+            <button class="leaderboard-tab" type="button" data-range="weekly">Weekly</button>
+            <button class="leaderboard-tab" type="button" data-range="daily">Daily</button>
+          </div>
+          <p class="leaderboard-caption" id="leaderboardCaption">All-time scores are loaded from persistent contract storage. Daily and weekly views are derived from recent on-chain score events.</p>
           <ul class="leaderboard-list" id="leaderboardList" aria-live="polite">
             <li class="leaderboard-item">
               <div class="leaderboard-rank">#</div>
@@ -906,21 +1106,46 @@
           <div class="section-title">
             <div>
               <h3>Safety Notes</h3>
-              <p>This build is designed for the narrowest possible wallet surface.</p>
+              <p>This build is tuned for clear trust signals, low wallet risk, and predictable on-chain behavior.</p>
+            </div>
+            <div class="tiny-badge safety-badge">🛡️ Trust Layer</div>
+          </div>
+          <div class="security-grid">
+            <div class="security-item">
+              <div class="security-icon">🔐</div>
+              <div class="security-copy">
+                <strong>Score Storage Only</strong>
+                <p>The smart contract is designed for score tracking and should not custody user funds.</p>
+              </div>
+            </div>
+            <div class="security-item">
+              <div class="security-icon">🚫</div>
+              <div class="security-copy">
+                <strong>No Approvals</strong>
+                <p>The frontend does not ask for token approvals, permit signatures, or asset transfer permissions.</p>
+              </div>
+            </div>
+            <div class="security-item">
+              <div class="security-icon">🧭</div>
+              <div class="security-copy">
+                <strong>Base Mainnet Guardrails</strong>
+                <p>If the wallet is on the wrong network, the app attempts a normal Base Mainnet switch or add-chain flow.</p>
+              </div>
+            </div>
+            <div class="security-item">
+              <div class="security-icon">📣</div>
+              <div class="security-copy">
+                <strong>Farcaster Mini App Ready</strong>
+                <p>The site now includes Mini App embed metadata, runtime SDK readiness, and manifest support for Farcaster publishing.</p>
+              </div>
             </div>
           </div>
-          <ul class="security-list">
-            <li>The contract is for score storage only and must not hold user funds.</li>
-            <li>The frontend never asks for token approvals, permit signatures, or asset transfers.</li>
-            <li>If Base Mainnet is not selected, the app attempts a normal switch or add-chain flow.</li>
-            <li>The leaderboard is read from contract storage instead of scanning an arbitrary subset of past writes.</li>
-          </ul>
         </section>
       </aside>
     </div>
 
     <div class="footer-note">
-      This build is locked to the deployed Base Mainnet contract and is ready for static hosting on Vercel.
+      This build is locked to the deployed Base Mainnet contract, supports shareable score runs, and is prepared for Vercel + Farcaster Mini App publishing.
     </div>
   </div>
 
@@ -974,6 +1199,27 @@
       "event ScoreSubmitted(address indexed player, uint256 score, uint256 previousBest, uint256 timestamp)"
     ];
 
+    const CONTRACT_INTERFACE = new ethers.Interface(CONTRACT_ABI);
+    const SCORE_SUBMITTED_TOPIC = ethers.id("ScoreSubmitted(address,uint256,uint256,uint256)");
+    const LEADERBOARD_CONFIG = {
+      all: {
+        label: "All-Time",
+        reason: "All-time scores are loaded from persistent contract storage."
+      },
+      weekly: {
+        label: "Weekly",
+        seconds: 7 * 24 * 60 * 60,
+        lookbackBlocks: 360000,
+        reason: "Weekly scores are derived from recent on-chain score submission events."
+      },
+      daily: {
+        label: "Daily",
+        seconds: 24 * 60 * 60,
+        lookbackBlocks: 56000,
+        reason: "Daily scores are derived from on-chain score submission events in the last 24 hours."
+      }
+    };
+
     const state = {
       board: new Array(16).fill(0),
       score: 0,
@@ -995,7 +1241,15 @@
       minimumSubmitScore: 0,
       pointerStartX: 0,
       pointerStartY: 0,
-      pointerActive: false
+      pointerActive: false,
+      leaderboardRange: "all",
+      leaderboards: {
+        all: null,
+        weekly: null,
+        daily: null
+      },
+      farcasterSdk: null,
+      isMiniApp: false
     };
 
     const elements = {};
@@ -1024,15 +1278,19 @@
         copyContractButton: document.getElementById("copyContractButton"),
         contractExplorerLink: document.getElementById("contractExplorerLink"),
         leaderboardList: document.getElementById("leaderboardList"),
+        leaderboardCaption: document.getElementById("leaderboardCaption"),
         newGameButton: document.getElementById("newGameButton"),
         undoButton: document.getElementById("undoButton"),
         submitButton: document.getElementById("submitButton"),
+        shareXButton: document.getElementById("shareXButton"),
+        shareFarcasterButton: document.getElementById("shareFarcasterButton"),
         networkBadgeText: document.getElementById("networkBadgeText"),
         networkDot: document.getElementById("networkDot"),
         openHelpButton: document.getElementById("openHelpButton"),
         closeHelpButton: document.getElementById("closeHelpButton"),
         helpModal: document.getElementById("helpModal"),
-        themeToggleButton: document.getElementById("themeToggleButton")
+        themeToggleButton: document.getElementById("themeToggleButton"),
+        leaderboardTabs: Array.from(document.querySelectorAll(".leaderboard-tab"))
       });
     }
 
@@ -1098,6 +1356,48 @@
     function shortenAddress(address) {
       if (!address || address === ZERO_ADDRESS) return "Not configured";
       return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    }
+
+    function getAppUrl() {
+      return `${window.location.origin}${window.location.pathname}`;
+    }
+
+    function getShareText() {
+      const score = state.score || 0;
+      if (state.hasEnded && score > 0) {
+        return `I just posted a ${score} score in Base2048Pulse on Base Mainnet. Play the on-chain 2048 run and see if you can beat it.`;
+      }
+      if (score > 0) {
+        return `I am at ${score} points in Base2048Pulse on Base Mainnet. Jump in and try to top this run.`;
+      }
+      return "I am playing Base2048Pulse on Base Mainnet. Try the smooth on-chain 2048 experience and see how far you can go.";
+    }
+
+    function buildXShareUrl() {
+      const url = new URL("https://x.com/intent/tweet");
+      url.searchParams.set("text", getShareText());
+      url.searchParams.set("url", getAppUrl());
+      return url.toString();
+    }
+
+    function buildFarcasterIntentUrl() {
+      const url = new URL("https://warpcast.com/~/compose");
+      url.searchParams.set("text", getShareText());
+      url.searchParams.append("embeds[]", getAppUrl());
+      return url.toString();
+    }
+
+    function updateShareButtons() {
+      const canShare = state.score > 0;
+      elements.shareXButton.disabled = !canShare;
+      elements.shareFarcasterButton.disabled = !canShare;
+    }
+
+    function updateLeaderboardTabs() {
+      elements.leaderboardTabs.forEach((button) => {
+        button.classList.toggle("active", button.dataset.range === state.leaderboardRange);
+      });
+      elements.leaderboardCaption.textContent = LEADERBOARD_CONFIG[state.leaderboardRange].reason;
     }
 
     function updateContractLabels() {
@@ -1355,6 +1655,7 @@
       elements.bestLocalValue.textContent = String(state.bestLocalScore);
       elements.bestOnChainValue.textContent = String(state.bestOnChainScore);
       elements.undoButton.disabled = !state.previousSnapshot;
+      updateShareButtons();
     }
 
     function canSubmitScore() {
@@ -1410,6 +1711,7 @@
 
     function renderLeaderboard(entries, reasonText) {
       elements.leaderboardList.innerHTML = "";
+      elements.leaderboardCaption.textContent = reasonText;
 
       if (!entries.length) {
         const item = document.createElement("li");
@@ -1441,7 +1743,79 @@
       });
     }
 
-    async function refreshLeaderboard() {
+    async function fetchScoreEventEntries(fromBlock, toBlock) {
+      const parsedEntries = [];
+      const chunkSize = 50000;
+
+      for (let startBlock = fromBlock; startBlock <= toBlock; startBlock += chunkSize) {
+        const endBlock = Math.min(startBlock + chunkSize - 1, toBlock);
+        const logs = await state.readProvider.getLogs({
+          address: state.contractAddress,
+          topics: [SCORE_SUBMITTED_TOPIC],
+          fromBlock: startBlock,
+          toBlock: endBlock
+        });
+
+        logs.forEach((log) => {
+          const parsed = CONTRACT_INTERFACE.parseLog(log);
+          parsedEntries.push({
+            player: parsed.args.player,
+            score: Number(parsed.args.score),
+            updatedAt: Number(parsed.args.timestamp)
+          });
+        });
+      }
+
+      return parsedEntries;
+    }
+
+    async function buildWindowedLeaderboard(rangeKey) {
+      const config = LEADERBOARD_CONFIG[rangeKey];
+      const latestBlock = await state.readProvider.getBlockNumber();
+      const fromBlock = Math.max(0, latestBlock - config.lookbackBlocks);
+      const entries = await fetchScoreEventEntries(fromBlock, latestBlock);
+      const cutoff = Math.floor(Date.now() / 1000) - config.seconds;
+      const bestByPlayer = new Map();
+
+      entries.forEach((entry) => {
+        if (entry.updatedAt < cutoff) return;
+        const current = bestByPlayer.get(entry.player);
+        if (!current || entry.score > current.score || (entry.score === current.score && entry.updatedAt > current.updatedAt)) {
+          bestByPlayer.set(entry.player, entry);
+        }
+      });
+
+      return Array.from(bestByPlayer.values())
+        .sort((left, right) => right.score - left.score || right.updatedAt - left.updatedAt)
+        .slice(0, 10);
+    }
+
+    async function loadLeaderboardRange(rangeKey, force = false) {
+      if (!force && state.leaderboards[rangeKey]) {
+        return state.leaderboards[rangeKey];
+      }
+
+      let entries = [];
+
+      if (rangeKey === "all") {
+        const topEntries = await state.readContract.getTopEntries();
+        entries = topEntries.map((entry) => ({
+          player: entry.player,
+          score: Number(entry.score),
+          updatedAt: Number(entry.updatedAt)
+        }));
+      } else {
+        entries = await buildWindowedLeaderboard(rangeKey);
+      }
+
+      state.leaderboards[rangeKey] = entries;
+      return entries;
+    }
+
+    async function setLeaderboardRange(rangeKey, force = false) {
+      state.leaderboardRange = rangeKey;
+      updateLeaderboardTabs();
+
       if (!state.readContract) {
         try {
           await initializeContracts();
@@ -1453,21 +1827,26 @@
       }
 
       elements.refreshLeaderboardButton.disabled = true;
+      elements.leaderboardTabs.forEach((button) => {
+        button.disabled = true;
+      });
 
       try {
-        const entries = await state.readContract.getTopEntries();
-        const normalizedEntries = entries.map((entry) => ({
-          player: entry.player,
-          score: Number(entry.score),
-          updatedAt: Number(entry.updatedAt)
-        }));
-        renderLeaderboard(normalizedEntries, "The contract is live but no score has been stored yet.");
+        const entries = await loadLeaderboardRange(rangeKey, force);
+        renderLeaderboard(entries, entries.length ? LEADERBOARD_CONFIG[rangeKey].reason : `${LEADERBOARD_CONFIG[rangeKey].reason} No scores are available in this time window yet.`);
       } catch (error) {
-        renderLeaderboard([], "The locked contract did not return the expected leaderboard data.");
-        setStatus("danger", "Leaderboard Error", "The locked contract is not responding to the expected score interface.");
+        renderLeaderboard([], `The ${LEADERBOARD_CONFIG[rangeKey].label.toLowerCase()} leaderboard could not be loaded right now.`);
+        setStatus("danger", "Leaderboard Error", "The locked contract did not return the expected leaderboard data for this time range.");
       } finally {
         elements.refreshLeaderboardButton.disabled = false;
+        elements.leaderboardTabs.forEach((button) => {
+          button.disabled = false;
+        });
       }
+    }
+
+    async function refreshLeaderboard(force = true) {
+      return setLeaderboardRange(state.leaderboardRange, force);
     }
 
     async function refreshPlayerBest() {
@@ -1611,6 +1990,7 @@
         state.txState = "idle";
         state.lastSubmittedScore = state.score;
         state.bestOnChainScore = Math.max(state.bestOnChainScore, state.score);
+        state.leaderboards = { all: null, weekly: null, daily: null };
         updateScoreUI();
         updateSubmissionState();
         await refreshLeaderboard();
@@ -1698,6 +2078,41 @@
       elements.helpModal.setAttribute("aria-hidden", "true");
     }
 
+    function shareOnX() {
+      window.open(buildXShareUrl(), "_blank", "noopener,noreferrer");
+    }
+
+    async function shareOnFarcaster() {
+      const shareUrl = getAppUrl();
+      const shareText = getShareText();
+
+      try {
+        if (state.isMiniApp && state.farcasterSdk?.actions?.composeCast) {
+          await state.farcasterSdk.actions.composeCast({
+            text: shareText,
+            embeds: [shareUrl]
+          });
+          setStatus("success", "Opened Farcaster Share", "The native Farcaster cast composer is ready.");
+          return;
+        }
+      } catch (error) {
+        // Fallback to Warpcast intent below.
+      }
+
+      window.open(buildFarcasterIntentUrl(), "_blank", "noopener,noreferrer");
+    }
+
+    async function initializeMiniApp() {
+      try {
+        const { sdk } = await import("https://esm.sh/@farcaster/miniapp-sdk");
+        state.farcasterSdk = sdk;
+        await sdk.actions.ready();
+        state.isMiniApp = true;
+      } catch (error) {
+        state.isMiniApp = false;
+      }
+    }
+
     function attachWalletListeners() {
       if (!window.ethereum || !window.ethereum.on) return;
 
@@ -1744,13 +2159,20 @@
     function attachEvents() {
       elements.connectHeroButton.addEventListener("click", connectWallet);
       elements.connectSidebarButton.addEventListener("click", connectWallet);
-      elements.refreshLeaderboardButton.addEventListener("click", refreshLeaderboard);
+      elements.refreshLeaderboardButton.addEventListener("click", () => refreshLeaderboard(true));
       elements.copyContractButton.addEventListener("click", copyContractAddress);
       elements.newGameButton.addEventListener("click", resetGame);
       elements.undoButton.addEventListener("click", undoMove);
       elements.submitButton.addEventListener("click", submitScore);
+      elements.shareXButton.addEventListener("click", shareOnX);
+      elements.shareFarcasterButton.addEventListener("click", shareOnFarcaster);
       elements.openHelpButton.addEventListener("click", openHelp);
       elements.closeHelpButton.addEventListener("click", closeHelp);
+      elements.leaderboardTabs.forEach((button) => {
+        button.addEventListener("click", () => {
+          setLeaderboardRange(button.dataset.range, false);
+        });
+      });
       elements.helpModal.addEventListener("click", (event) => {
         if (event.target === elements.helpModal) closeHelp();
       });
@@ -1771,6 +2193,7 @@
       updateContractLabels();
       updateNetworkBadge();
       updateScoreUI();
+      updateLeaderboardTabs();
       attachEvents();
 
       try {
@@ -1781,6 +2204,7 @@
       }
 
       resetGame();
+      await initializeMiniApp();
     }
 
     window.addEventListener("load", initializeApp);
