@@ -3387,6 +3387,21 @@
       return [];
     }
 
+    async function waitForWalletConnectProviderReady(maxAttempts = 8, delayMs = 500) {
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const provider = syncAppKitWalletProvider() || state.walletConnectProvider;
+        if (isUsableEip1193Provider(provider)) {
+          return provider;
+        }
+
+        if (attempt < maxAttempts - 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+        }
+      }
+
+      return null;
+    }
+
     async function tryRestoreWalletConnectSession() {
       if (!state.walletConnectProvider || !isUsableEip1193Provider(state.walletConnectProvider)) {
         syncAppKitWalletProvider();
@@ -3397,13 +3412,19 @@
         return false;
       }
 
+      const provider = await waitForWalletConnectProviderReady();
+      if (!isUsableEip1193Provider(provider)) {
+        return false;
+      }
+
       state.walletSource = "walletconnect";
-      state.walletProvider = state.walletConnectProvider;
-      state.browserProvider = new ethers.BrowserProvider(state.walletConnectProvider);
+      state.walletConnectProvider = provider;
+      state.walletProvider = provider;
+      state.browserProvider = new ethers.BrowserProvider(provider);
       state.signer = await state.browserProvider.getSigner();
       state.walletAddress = ethers.getAddress(accounts[0]);
       state.writeContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.signer);
-      await ensureBaseNetwork(state.walletConnectProvider);
+      await ensureBaseNetwork(provider);
       elements.walletStatusValue.textContent = shortenAddress(state.walletAddress);
       elements.connectHeroButton.textContent = "Wallet Connected";
       elements.connectSidebarButton.textContent = "Wallet Connected";
