@@ -1495,6 +1495,20 @@
       getWalletProvider() {
         return appKitBridgeState.provider || readAppKitProvider();
       },
+      getAddress() {
+        if (!appKitBridgeState.modal || typeof appKitBridgeState.modal.getAddress !== "function") {
+          return null;
+        }
+
+        return appKitBridgeState.modal.getAddress() || null;
+      },
+      getIsConnected() {
+        if (!appKitBridgeState.modal || typeof appKitBridgeState.modal.getIsConnected !== "function") {
+          return Boolean(appKitBridgeState.provider);
+        }
+
+        return Boolean(appKitBridgeState.modal.getIsConnected());
+      },
       syncProvider() {
         return syncAppKitBridgeProvider();
       },
@@ -1812,6 +1826,29 @@
         : bridge.getWalletProvider?.();
       state.walletConnectProvider = isUsableEip1193Provider(provider) ? provider : null;
       return state.walletConnectProvider;
+    }
+
+    function getAppKitConnectionSnapshot() {
+      const bridge = getAppKitBridge();
+      if (!bridge) {
+        return {
+          provider: null,
+          address: null,
+          isConnected: false
+        };
+      }
+
+      const provider = syncAppKitWalletProvider();
+      const address = typeof bridge.getAddress === "function" ? bridge.getAddress() : null;
+      const isConnected = typeof bridge.getIsConnected === "function"
+        ? bridge.getIsConnected()
+        : Boolean(address || provider);
+
+      return {
+        provider,
+        address: typeof address === "string" && address ? address : null,
+        isConnected: Boolean(isConnected)
+      };
     }
 
     function openWalletAppWithFallback(primaryUrl, fallbackUrl = "") {
@@ -3320,12 +3357,42 @@
       }
     }
 
-    async function tryRestoreWalletConnectSession() {
-      if (!state.walletConnectProvider || !isUsableEip1193Provider(state.walletConnectProvider)) {
-        return false;
+    async function waitForWalletConnectSessionAccounts(maxAttempts = 8, delayMs = 500, providerOverride = null) {
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const appKitState = getAppKitConnectionSnapshot();
+        const provider = isUsableEip1193Provider(providerOverride)
+          ? providerOverride
+          : (appKitState.provider || state.walletConnectProvider);
+
+        if (isUsableEip1193Provider(provider)) {
+          try {
+            const accounts = await provider.request({ method: "eth_accounts" });
+            if (Array.isArray(accounts) && accounts.length) {
+              return accounts;
+            }
+          } catch (error) {
+            // Wait for the provider to finish rehydrating after the wallet app returns control.
+          }
+        }
+
+        if (appKitState.isConnected && appKitState.address) {
+          return [appKitState.address];
+        }
+
+        if (attempt < maxAttempts - 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+        }
       }
 
-      const accounts = await state.walletConnectProvider.request({ method: "eth_accounts" });
+      return [];
+    }
+
+    async function tryRestoreWalletConnectSession() {
+      if (!state.walletConnectProvider || !isUsableEip1193Provider(state.walletConnectProvider)) {
+        syncAppKitWalletProvider();
+      }
+
+      const accounts = await waitForWalletConnectSessionAccounts();
       if (!Array.isArray(accounts) || !accounts.length) {
         return false;
       }
@@ -3374,6 +3441,11 @@
         );
       } else {
         setSafariWalletFlowState("walletconnect_fallback_ready");
+        setStatus(
+          "danger",
+          "Safari Fallback Ready",
+          "Safari returned before WalletConnect finished restoring the approved session. Use Open In Wallet App to continue inside the wallet browser if the signed session does not appear."
+        );
       }
     }
 
@@ -3485,6 +3557,7 @@
       window.addEventListener("appkit:provider", handleAppKitProviderEvent);
       document.addEventListener("visibilitychange", handleSafariReturn);
       window.addEventListener("focus", handleSafariReturn);
+      window.addEventListener("pageshow", handleSafariReturn);
       elements.boardFrame.addEventListener("pointerdown", onPointerDown);
       elements.boardFrame.addEventListener("pointerup", onPointerUp);
       elements.boardFrame.addEventListener("pointercancel", onPointerCancel);
