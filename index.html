@@ -1245,7 +1245,7 @@
             </div>
 
             <button id="connectSidebarButton" class="button button-primary" type="button">Connect Wallet</button>
-            <p class="hint">On iPhone Safari, the safest path is to open the game inside a wallet app browser such as MetaMask, Coinbase Wallet, or Trust Wallet.</p>
+            <p class="hint">On iPhone Safari, Connect Wallet now opens WalletConnect first and keeps Open In Wallet App as a fallback if the picker does not complete.</p>
           </div>
         </section>
 
@@ -1335,6 +1335,7 @@
       <ol>
         <li>Play locally and keep moving as long as you want.</li>
         <li>Connect your wallet only when you are ready to submit a valid final score.</li>
+        <li>On iPhone Safari, the app opens WalletConnect first. If signing completes in the wallet app, return to Safari if the browser does not reopen automatically.</li>
         <li>Switch to Base Mainnet if prompted by your wallet.</li>
         <li>You can submit your current score at any point in a run, even before game over.</li>
         <li>Refresh the leaderboard after confirmation to see the updated ranking.</li>
@@ -1346,8 +1347,8 @@
     <div class="modal-card">
       <div class="section-title">
         <div>
-          <h3>Open In Wallet App</h3>
-          <p>Safari on iPhone connects more reliably when the game is opened inside a wallet app browser.</p>
+          <h3>Open In Wallet App Instead</h3>
+          <p>WalletConnect is the primary Safari flow, but you can switch to a wallet app browser if the picker does not complete.</p>
         </div>
         <button id="closeSafariWalletButton" class="button button-ghost" type="button">Close</button>
       </div>
@@ -1356,7 +1357,7 @@
         <button id="openCoinbaseDeepLinkButton" class="button button-secondary wallet-option-button" type="button">Open in Coinbase Wallet</button>
         <button id="openTrustDeepLinkButton" class="button button-secondary wallet-option-button" type="button">Open in Trust Wallet</button>
       </div>
-      <p class="wallet-option-note">After the wallet app opens, let the game load there and tap Connect Wallet again inside that wallet browser. This bypasses Safari popup blocking and follows the recommended mobile deep-link flow.</p>
+      <p class="wallet-option-note">This fallback opens the game directly inside the selected wallet browser. Use it if WalletConnect does not complete in Safari, or if you prefer to continue entirely inside the wallet app.</p>
     </div>
   </div>
 
@@ -1455,6 +1456,7 @@
       walletConnectProvider: null,
       walletConnectModal: null,
       walletSource: "none",
+      safariWalletFlowState: "idle",
       walletListenerProvider: null,
       walletAccountsChangedHandler: null,
       walletChainChangedHandler: null,
@@ -1600,6 +1602,23 @@
       setModalOpen(elements.safariWalletModal, false);
     }
 
+    function setSafariWalletFlowState(nextState) {
+      state.safariWalletFlowState = nextState;
+    }
+
+    function shouldOfferSafariDeepLinkFallback(source, error) {
+      if (!isLikelyIOSSafariBrowser()) {
+        return false;
+      }
+
+      if (source === "walletconnect_error") {
+        return true;
+      }
+
+      const message = String(error?.message || error || "");
+      return message.includes("did not expose EthereumProvider") || message.includes("Failed to load");
+    }
+
     function openWalletAppWithFallback(primaryUrl, fallbackUrl = "") {
       const fallbackTimer = window.setTimeout(() => {
         if (!document.hidden && fallbackUrl) {
@@ -1653,11 +1672,11 @@
 
       if (isLikelySafariBrowser()) {
         if (source === "safari_manual_deeplink") {
-          return "Safari on iPhone should continue inside a wallet app browser instead of waiting for a popup provider. Choose MetaMask, Coinbase Wallet, or Trust Wallet to continue.";
+          return "WalletConnect could not complete in iPhone Safari. Use Open In Wallet App to continue inside MetaMask, Coinbase Wallet, or Trust Wallet.";
         }
         return hasConfiguredReownProjectId()
-          ? "No injected wallet was detected in iPhone Safari, so the app is ready to use the WalletConnect / Reown fallback. If nothing opens, confirm that the WalletConnect bundle can load and that your mobile wallet supports WalletConnect."
-          : "No injected wallet was detected in iPhone Safari. Replace the placeholder REOWN_PROJECT_ID in index.html to activate the WalletConnect / Reown fallback.";
+          ? "Safari is ready to open the WalletConnect wallet picker. After approving in your wallet, return to Safari if the browser does not reopen automatically."
+          : "No injected wallet was detected in iPhone Safari. Replace REOWN_PROJECT_ID in index.html to activate the WalletConnect wallet picker.";
       }
 
       return hasConfiguredReownProjectId()
@@ -1680,6 +1699,7 @@
 
     function resetWalletConnectionState() {
       state.walletSource = "none";
+      state.safariWalletFlowState = "idle";
       state.walletAddress = null;
       state.walletProvider = null;
       state.browserProvider = null;
@@ -1903,10 +1923,6 @@
         return { provider: injectedProvider, source: "injected" };
       }
 
-      if (isLikelyIOSSafariBrowser()) {
-        return { provider: null, source: "safari_manual_deeplink" };
-      }
-
       try {
         const walletConnectProvider = await loadWalletConnectProvider();
         if (isUsableEip1193Provider(walletConnectProvider)) {
@@ -1914,6 +1930,10 @@
         }
       } catch (error) {
         return { provider: null, source: "walletconnect_error", error };
+      }
+
+      if (isLikelyIOSSafariBrowser()) {
+        return { provider: null, source: "safari_manual_deeplink" };
       }
 
       return { provider: null, source: hasConfiguredReownProjectId() ? "none" : "walletconnect_unconfigured" };
@@ -2785,9 +2805,10 @@
       const hostedMiniApp = await detectMiniAppHost();
 
       if (!provider) {
-        if (source === "safari_manual_deeplink") {
+        if (source === "safari_manual_deeplink" || shouldOfferSafariDeepLinkFallback(source, providerError)) {
+          setSafariWalletFlowState("walletconnect_fallback_ready");
           openSafariWalletModal();
-          setStatus("danger", "Wallet Missing", getWalletMissingMessage(source, hostedMiniApp));
+          setStatus("danger", "Safari Fallback Ready", getWalletMissingMessage("safari_manual_deeplink", hostedMiniApp));
           return;
         }
 
@@ -2800,7 +2821,16 @@
 
       try {
         state.walletSource = source;
-        setStatus("success", "Connecting", "Approve the wallet connection request to continue.");
+        if (isLikelyIOSSafariBrowser() && source === "walletconnect") {
+          setSafariWalletFlowState("walletconnect_opening");
+          setStatus(
+            "success",
+            "Opening Wallet Picker",
+            "Choose a wallet, approve the request there, then return to Safari if the browser does not reopen automatically."
+          );
+        } else {
+          setStatus("success", "Connecting", "Approve the wallet connection request to continue.");
+        }
         let accounts = [];
         try {
           accounts = await provider.request({ method: "eth_accounts" });
@@ -2809,6 +2839,9 @@
         }
 
         if (!Array.isArray(accounts) || !accounts.length) {
+          if (isLikelyIOSSafariBrowser() && source === "walletconnect") {
+            setSafariWalletFlowState("walletconnect_waiting_return");
+          }
           accounts = await provider.request({ method: "eth_requestAccounts" });
         }
 
@@ -2829,6 +2862,7 @@
 
         state.writeContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.signer);
         attachWalletListeners(provider);
+        setSafariWalletFlowState("idle");
 
         elements.walletStatusValue.textContent = shortenAddress(state.walletAddress);
         elements.connectHeroButton.textContent = "Wallet Connected";
@@ -2847,6 +2881,7 @@
         if (source === "walletconnect") {
           await disconnectWalletConnectSession();
         }
+        setSafariWalletFlowState("idle");
         resetWalletConnectionState();
         const message = getReadableError(error);
         setStatus("danger", source === "walletconnect" ? "WalletConnect Failed" : "Wallet Connection Failed", message);
@@ -3056,6 +3091,59 @@
       }
     }
 
+    async function tryRestoreWalletConnectSession() {
+      if (!state.walletConnectProvider || !isUsableEip1193Provider(state.walletConnectProvider)) {
+        return false;
+      }
+
+      const accounts = await state.walletConnectProvider.request({ method: "eth_accounts" });
+      if (!Array.isArray(accounts) || !accounts.length) {
+        return false;
+      }
+
+      state.walletSource = "walletconnect";
+      state.walletProvider = state.walletConnectProvider;
+      state.browserProvider = new ethers.BrowserProvider(state.walletConnectProvider);
+      state.signer = await state.browserProvider.getSigner();
+      state.walletAddress = ethers.getAddress(accounts[0]);
+      state.writeContract = new ethers.Contract(state.contractAddress, CONTRACT_ABI, state.signer);
+      await ensureBaseNetwork(state.walletConnectProvider);
+      elements.walletStatusValue.textContent = shortenAddress(state.walletAddress);
+      elements.connectHeroButton.textContent = "Wallet Connected";
+      elements.connectSidebarButton.textContent = "Wallet Connected";
+      elements.connectHeroButton.disabled = true;
+      elements.connectSidebarButton.disabled = true;
+      updateNetworkBadge();
+      await refreshPlayerBest();
+      return true;
+    }
+
+    async function handleSafariReturn() {
+      if (!isLikelyIOSSafariBrowser()) {
+        return;
+      }
+
+      if (document.hidden) {
+        return;
+      }
+
+      if (state.safariWalletFlowState !== "walletconnect_waiting_return") {
+        return;
+      }
+
+      const restored = await tryRestoreWalletConnectSession();
+      if (restored) {
+        setSafariWalletFlowState("idle");
+        setStatus(
+          "success",
+          "Wallet Restored",
+          "Safari is active again and the wallet session was restored. You can continue the game and submit your score."
+        );
+      } else {
+        setSafariWalletFlowState("walletconnect_fallback_ready");
+      }
+    }
+
     function detachWalletListeners() {
       const provider = state.walletListenerProvider;
       if (!provider || typeof provider.removeListener !== "function") return;
@@ -3144,6 +3232,8 @@
       elements.themeToggleButton.addEventListener("click", toggleTheme);
 
       window.addEventListener("keydown", handleKeyboardMove);
+      document.addEventListener("visibilitychange", handleSafariReturn);
+      window.addEventListener("focus", handleSafariReturn);
       elements.boardFrame.addEventListener("pointerdown", onPointerDown);
       elements.boardFrame.addEventListener("pointerup", onPointerUp);
       elements.boardFrame.addEventListener("pointercancel", onPointerCancel);
