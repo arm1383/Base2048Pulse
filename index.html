@@ -637,6 +637,21 @@
       align-content: start;
     }
 
+    .leaderboard-pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+    
+    .leaderboard-page-info {
+      font-size: 13px;
+      color: var(--text-2);
+      font-family: var(--font-mono);
+    }
+
     .leaderboard-item {
       display: grid;
       grid-template-columns: auto 1fr auto;
@@ -1273,6 +1288,11 @@
               <div class="leaderboard-score">--</div>
             </li>
           </ul>
+          <div class="leaderboard-pagination" id="leaderboardPagination" style="display: none;">
+            <button class="button button-ghost" id="leaderboardPrevBtn" disabled>&larr; Prev</button>
+            <span id="leaderboardPageInfo" class="leaderboard-page-info">Page 1</span>
+            <button class="button button-ghost" id="leaderboardNextBtn">Next &rarr;</button>
+          </div>
         </section>
 
       </aside>
@@ -1650,6 +1670,8 @@
       isMiniApp: false,
       contractMode: "legacy",
       allSubmissionsCache: null,
+      leaderboardPage: 1,
+      leaderboardEntriesCache: [],
       basenameCache: new Map(),
       basenamePending: new Map(),
       ensMainnetProvider: null,
@@ -1685,6 +1707,10 @@
         copyContractButton: document.getElementById("copyContractButton"),
         contractExplorerLink: document.getElementById("contractExplorerLink"),
         leaderboardList: document.getElementById("leaderboardList"),
+        leaderboardPagination: document.getElementById("leaderboardPagination"),
+        leaderboardPrevBtn: document.getElementById("leaderboardPrevBtn"),
+        leaderboardNextBtn: document.getElementById("leaderboardNextBtn"),
+        leaderboardPageInfo: document.getElementById("leaderboardPageInfo"),
         leaderboardCaption: document.getElementById("leaderboardCaption"),
         newGameButton: document.getElementById("newGameButton"),
         undoButton: document.getElementById("undoButton"),
@@ -1740,6 +1766,77 @@
     function isLikelyIOSSafariBrowser() {
       const userAgent = navigator.userAgent || "";
       return isLikelySafariBrowser() && /iPhone|iPad|iPod/i.test(userAgent);
+    }
+
+    const SAFARI_PENDING_WALLET_REQUEST_KEY = "base2048pulse:safari-pending-wallet-request";
+
+    function writeSafariPendingWalletRequest(partialRequest) {
+      const storageKey = typeof SAFARI_PENDING_WALLET_REQUEST_KEY === "string"
+        ? SAFARI_PENDING_WALLET_REQUEST_KEY
+        : "base2048pulse:safari-pending-wallet-request";
+      const nextRequest = {
+        requestId: window.crypto?.randomUUID?.() || `req-${Date.now()}`,
+        createdAt: Date.now(),
+        status: "launching",
+        attempt: 1,
+        returnBrowser: "safari",
+        context: {},
+        ...partialRequest
+      };
+
+      sessionStorage.setItem(storageKey, JSON.stringify(nextRequest));
+      return nextRequest;
+    }
+
+    function readSafariPendingWalletRequest() {
+      const storageKey = typeof SAFARI_PENDING_WALLET_REQUEST_KEY === "string"
+        ? SAFARI_PENDING_WALLET_REQUEST_KEY
+        : "base2048pulse:safari-pending-wallet-request";
+      const rawValue = sessionStorage.getItem(storageKey);
+      if (!rawValue) {
+        return null;
+      }
+
+      try {
+        return JSON.parse(rawValue);
+      } catch (error) {
+        sessionStorage.removeItem(storageKey);
+        return null;
+      }
+    }
+
+    function clearSafariPendingWalletRequest() {
+      const storageKey = typeof SAFARI_PENDING_WALLET_REQUEST_KEY === "string"
+        ? SAFARI_PENDING_WALLET_REQUEST_KEY
+        : "base2048pulse:safari-pending-wallet-request";
+      sessionStorage.removeItem(storageKey);
+    }
+
+    function startSafariPendingConnect(walletId) {
+      return writeSafariPendingWalletRequest({
+        kind: "connect",
+        walletId,
+        status: "launching",
+        context: {}
+      });
+    }
+
+    function updateSafariPendingWalletRequest(patch) {
+      const currentRequest = readSafariPendingWalletRequest();
+      if (!currentRequest) {
+        return null;
+      }
+
+      const storageKey = typeof SAFARI_PENDING_WALLET_REQUEST_KEY === "string"
+        ? SAFARI_PENDING_WALLET_REQUEST_KEY
+        : "base2048pulse:safari-pending-wallet-request";
+      const nextRequest = {
+        ...currentRequest,
+        ...patch
+      };
+
+      sessionStorage.setItem(storageKey, JSON.stringify(nextRequest));
+      return nextRequest;
     }
 
     function buildMetaMaskDappDeepLink(url) {
@@ -2716,7 +2813,15 @@
       elements.leaderboardList.innerHTML = "";
       elements.leaderboardCaption.textContent = reasonText;
 
+      const itemsPerPage = 6;
+      const totalPages = Math.max(1, Math.ceil(entries.length / itemsPerPage));
+      
+      if (state.leaderboardPage > totalPages) {
+        state.leaderboardPage = totalPages;
+      }
+
       if (!entries.length) {
+        elements.leaderboardPagination.style.display = "none";
         const item = document.createElement("li");
         item.className = "leaderboard-item";
         item.innerHTML = `
@@ -2731,15 +2836,25 @@
         return;
       }
 
-      entries.forEach((entry, index) => {
+      elements.leaderboardPagination.style.display = "flex";
+      elements.leaderboardPageInfo.textContent = `Page ${state.leaderboardPage} of ${totalPages}`;
+      elements.leaderboardPrevBtn.disabled = state.leaderboardPage === 1;
+      elements.leaderboardNextBtn.disabled = state.leaderboardPage === totalPages;
+
+      const startIndex = (state.leaderboardPage - 1) * itemsPerPage;
+      const endIndex = Math.min(startIndex + itemsPerPage, entries.length);
+      const paginatedEntries = entries.slice(startIndex, endIndex);
+
+      paginatedEntries.forEach((entry, index) => {
         const item = document.createElement("li");
         item.className = "leaderboard-item";
         const playerLabel = getPreferredLeaderboardLabel(
           entry.player,
           state.basenameCache.get(entry.player.toLowerCase()) || null
         );
+        const globalRank = startIndex + index + 1;
         item.innerHTML = `
-          <div class="leaderboard-rank">${index + 1}</div>
+          <div class="leaderboard-rank">${globalRank}</div>
           <div>
             <div class="leaderboard-player" data-player-address="${entry.player.toLowerCase()}">${playerLabel}</div>
             <div class="leaderboard-time">${formatTimestamp(entry.updatedAt)}</div>
@@ -2925,6 +3040,7 @@
 
     async function setLeaderboardRange(rangeKey, force = false) {
       state.leaderboardRange = rangeKey;
+      state.leaderboardPage = 1; // Reset pagination on tab change
       updateLeaderboardTabs();
 
       if (!state.readContract) {
@@ -2944,8 +3060,10 @@
 
       try {
         const entries = await loadLeaderboardRange(rangeKey, force);
-        renderLeaderboard(entries, entries.length ? LEADERBOARD_CONFIG[rangeKey].reason : `${LEADERBOARD_CONFIG[rangeKey].reason} No scores are available in this time window yet.`);
+        state.leaderboardEntriesCache = entries;
+        renderLeaderboard(state.leaderboardEntriesCache, entries.length ? LEADERBOARD_CONFIG[rangeKey].reason : `${LEADERBOARD_CONFIG[rangeKey].reason} No scores are available in this time window yet.`);
       } catch (error) {
+        state.leaderboardEntriesCache = [];
         renderLeaderboard([], `The ${LEADERBOARD_CONFIG[rangeKey].label.toLowerCase()} leaderboard could not be loaded right now.`);
         setStatus("danger", "Leaderboard Error", "The locked contract did not return the expected leaderboard data for this time range.");
       } finally {
@@ -3052,16 +3170,21 @@
 
       if (!provider && source === "appkit_modal") {
         try {
+          const pendingRequest = startSafariPendingConnect("walletconnect");
           setSafariWalletFlowState("walletconnect_opening");
           setStatus(
             "success",
-            "Opening Wallet Picker",
-            "Choose a wallet, approve the request there, then return to Safari if the browser does not reopen automatically."
+            "Waiting For Wallet Approval",
+            "Approve the wallet connection in your wallet app, then return to Safari to finish the connection."
           );
           await openAppKitConnectModal();
-          syncAppKitWalletProvider();
+          updateSafariPendingWalletRequest({
+            status: "awaiting_browser_resume",
+            context: { requestId: pendingRequest.requestId }
+          });
           setSafariWalletFlowState("walletconnect_waiting_return");
         } catch (error) {
+          clearSafariPendingWalletRequest();
           setSafariWalletFlowState("walletconnect_fallback_ready");
           openSafariWalletModal();
           setStatus("danger", "Safari Fallback Ready", getWalletMissingMessage("safari_manual_deeplink", hostedMiniApp));
@@ -3565,6 +3688,19 @@
         button.addEventListener("click", () => {
           setLeaderboardRange(button.dataset.range, false);
         });
+      });
+      elements.leaderboardPrevBtn.addEventListener("click", () => {
+        if (state.leaderboardPage > 1) {
+          state.leaderboardPage -= 1;
+          renderLeaderboard(state.leaderboardEntriesCache, LEADERBOARD_CONFIG[state.leaderboardRange].reason);
+        }
+      });
+      elements.leaderboardNextBtn.addEventListener("click", () => {
+        const totalPages = Math.max(1, Math.ceil(state.leaderboardEntriesCache.length / 6));
+        if (state.leaderboardPage < totalPages) {
+          state.leaderboardPage += 1;
+          renderLeaderboard(state.leaderboardEntriesCache, LEADERBOARD_CONFIG[state.leaderboardRange].reason);
+        }
       });
       elements.helpModal.addEventListener("click", (event) => {
         if (event.target === elements.helpModal) closeHelp();
